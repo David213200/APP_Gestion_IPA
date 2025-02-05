@@ -16,7 +16,7 @@ export default function LoginScreen() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: "787603279609-3pcr1587qo7momb2s33o70phnk7q2d86.apps.googleusercontent.com",
-    iosClientId: "639559208157-hlri5cj2n6du6ho9g1l74ujpeu0qupha.apps.googleusercontent.com",
+    iosClientId: "787603279609-1ilcm9t123jnc7rld8hp5id03khsl4jm.apps.googleusercontent.com",
     androidClientId: "639559208157-7sc7g32fq002j2qmnl245unktmtp1psh.apps.googleusercontent.com",
     redirectUri: makeRedirectUri({
       native: "com.ipa.app://",
@@ -79,82 +79,3 @@ export default function LoginScreen() {
     </View>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*const LoginScreen = () => {
-  const [name, setName] = useState("");
-  const navigation = useNavigation();
-
-const handleLogin = () => {
-  if (name.toLowerCase() === "admin") {
-    navigation.navigate("Admin");
-  } else if (name.toLowerCase() === "Profesor") {
-    navigation.navigate("Profesor", { name });
-  } else {
-    navigation.navigate("Estudiante", { name }); // Aquí pasamos el parámetro "name"
-  }
-};
-
-  return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-      />
-      <Button title="Login" onPress={handleLogin} />
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 8,
-    marginBottom: 16,
-    borderRadius: 4,
-  },
-});
-
-export default LoginScreen;
-*/

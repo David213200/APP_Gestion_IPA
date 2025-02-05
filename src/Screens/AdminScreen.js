@@ -1,26 +1,38 @@
 import React from 'react';
-import { View, Button, StyleSheet, ScrollView, Image, Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ScrollView, Image, Text } from 'react-native';
+import { useNavigation } from "@react-navigation/native";
+import { MaterialIcons } from '@expo/vector-icons';
 
-/*<Image source={require('../assets/logo_InstitutAF_color_h.png')} style={styles.logo} resizeMode='contain' />*/
+const AdminScreen = ({ route }) => {
+  const navigation = useNavigation();
+  const userInfo = route.params?.user || {}; 
 
-const AdminScreen = ({ navigation }) => {
+  function handleLogout() {
+    try {
+      navigation.replace("Home"); 
+      console.log("Sesión cerrada correctamente");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
       <View style={styles.header}>
         <Text style={styles.title}>IPA Profesor</Text>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <MaterialIcons name="logout" size={24} color="white" />
+        </TouchableOpacity>
       </View>
-
+      <Text style={styles.welcomeText}>Bienvenido, {userInfo.name}!</Text>
       <View style={styles.outerContainer}>
         <View style={styles.container}>
-          <Button
-            title="Crear Datos"
-            onPress={() => navigation.navigate('Create')}
-          />
-          <Button
-            title="Consultar Datos"
-            onPress={() => navigation.navigate('DBView')}
-            style={styles.button}
-          />
+          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Create')}>
+            <Text style={styles.buttonText}>Crear Datos</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('DBView')}>
+            <Text style={styles.buttonText}>Consultar Datos</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -32,18 +44,25 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
-  },
-  logo: {
-    width: '80%', 
-    
-    marginBottom: 10 
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: '#f8f9fa',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 10,
+  },
+  logoutButton: {
+    backgroundColor: 'red',
+    padding: 10,
+    borderRadius: 5,
+  },
+  welcomeText: {
+    textAlign: 'center',
+    fontSize: 18,
+    marginVertical: 10,
   },
   outerContainer: {
     flex: 1,
@@ -64,9 +83,20 @@ const styles = StyleSheet.create({
     elevation: 3,
     width: "90%",
     maxWidth: 600,
+    alignItems: 'center',
   },
   button: {
-    marginTop: 20,
+    backgroundColor: "#007bff",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+    width: "100%",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 

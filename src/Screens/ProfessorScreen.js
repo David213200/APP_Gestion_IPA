@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Button } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Button } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 /*const icon = require('../assets/logo_InstitutAF_color_h.png');
 
@@ -10,11 +11,23 @@ const ProfessorScreen = ({ route }) => {
   const navigation = useNavigation();
   const name = route.params?.name || 'Desconocido'; // Manejo de parámetros inexistentes
 
+  const userInfo = route.params?.user || {}; // Recibe el usuario desde LoginScreen
+  
+    function handleLogout() {
+      try {
+        navigation.replace("Home"); // Envía al usuario a la pantalla de login
+        console.log("Sesión cerrada correctamente");
+      } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+      }
+    }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>IPA Profesor</Text>
-      </View>
+        <MaterialIcons name="logout" size={24} color="white" />
+        </View>
 
       <Text style={styles.greeting}>Bienvenido, Profesor {name}</Text>
 
