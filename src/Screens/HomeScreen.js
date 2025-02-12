@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Button, Image } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { makeRedirectUri } from "expo-auth-session";
 
 import { useNavigation } from "@react-navigation/native";
-
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -66,16 +65,48 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Inicio de Sesión con Google</Text>
-      {userInfo ? (
-        <View>
-          <Text>Bienvenido, {userInfo.name}!</Text>
-          <Image source={{ uri: userInfo.picture }} style={{ width: 100, height: 100 }} />
-        </View>
-      ) : (
-        <Button title="Iniciar sesión con Google" onPress={() => promptAsync()} disabled={!request} />
-      )}
+    <View style={styles.loginContainer}>
+      <Image source={require('./../../assets/logo.png')} style={styles.logo} resizeMode="stretch" />
+
+      <TouchableOpacity style={styles.loginButton} onPress={() => promptAsync()} disabled={!request}>
+        <Text style={styles.loginButtonText}>Iniciar sesión con Google</Text>
+      </TouchableOpacity>
+
     </View>
   );
 }
+
+const styles = StyleSheet.create({ 
+  loginContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#5f8e4e", // Fondo naranja claro
+    borderWidth: 2,
+    borderColor: "orange",
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  loginButton: {
+    backgroundColor: "orange",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  loginButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  logo: {
+    width: 300,
+    height: 100,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+});

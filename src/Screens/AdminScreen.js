@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, ScrollView, Image, Text } from 'react-native';
+import { View, TouchableOpacity, ScrollView, Text, StyleSheet } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -42,61 +42,58 @@ const AdminScreen = ({ route }) => {
 const styles = StyleSheet.create({
   scrollViewContent: {
     flexGrow: 1,
+    backgroundColor: '#1B5E20', // Verde fuerte
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    backgroundColor: '#f8f9fa',
+    alignItems:'center',
+    width: '100%',
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: 'white',
   },
   logoutButton: {
-    backgroundColor: 'red',
+    backgroundColor: 'orange',
     padding: 10,
-    borderRadius: 5,
+    borderRadius: 10,
   },
   welcomeText: {
-    textAlign: 'center',
     fontSize: 18,
-    marginVertical: 10,
+    color: 'white',
+    marginBottom: 20,
   },
   outerContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    width: '100%',
     alignItems: 'center',
-    backgroundColor: '#f0f4f8',
   },
   container: {
-    backgroundColor: "#fff",
+    backgroundColor: 'white',
     padding: 20,
-    borderRadius: 8,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-    width: "90%",
-    maxWidth: 600,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'orange',
+    width: '90%',
     alignItems: 'center',
   },
   button: {
-    backgroundColor: "#007bff",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
-    width: "100%",
-    alignItems: "center",
+    backgroundColor: 'orange',
+    padding: 15,
+    borderRadius: 10,
+    width: '80%',
+    alignItems: 'center',
+    marginVertical: 10,
   },
   buttonText: {
-    color: "white",
+    color: 'white',
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });
 
