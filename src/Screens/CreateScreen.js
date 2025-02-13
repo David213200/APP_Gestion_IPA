@@ -1,15 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Button } from 'react-native';
+import { ScrollView, TouchableOpacity } from 'react-native';
+import MaterialIcons from'react-native-vector-icons/MaterialIcons';
 
 import styles from './../StyleSheet/styles';
-const CreateScreen = ({ route }) => {
-    const name = route.params?.name || 'Desconocido'; // Manejo de parámetros inexistentes
+const CreateScreen = ({ navigation, route }) => {
     
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Bienvenido a crear {name}</Text>
-      </View>
+      <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
+        <MaterialIcons name="logout" size={30} color="red" />
+      </TouchableOpacity>
     </ScrollView>
   );
 };

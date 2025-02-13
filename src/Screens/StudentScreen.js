@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, ScrollView, Text, Modal, Dimensions } from 'react-native';
-import { useNavigation } from "@react-navigation/native";
+import { View, TouchableOpacity, ScrollView, Text, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import styles from './../StyleSheet/styles';
 
-const { width } = Dimensions.get('window');
-
 const StudentScreen = ({ route }) => {
-  const navigation = useNavigation();
+  const name = route.params?.name || 'Desconocido'; // Manejo de parámetros inexistentes
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
 
@@ -19,15 +16,6 @@ const StudentScreen = ({ route }) => {
     { id: 4, name: "Proyecto 4" },
   ];
 
-  function handleLogout() {
-    try {
-      navigation.replace("Home");
-      console.log("Sesión cerrada correctamente");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    }
-  }
-
   const openProjectDetails = (project) => {
     setSelectedProject(project);
     setModalVisible(true);
@@ -37,8 +25,11 @@ const StudentScreen = ({ route }) => {
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
       <View style={styles.header}>
         <Text style={styles.title}>IPA Estudiante</Text>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <MaterialIcons name="logout" size={24} color="white" />
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Bienvenido {name}, a ESTUDIAR!!</Text>
+        </View>
+        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
+          <MaterialIcons name="logout" size={30} color="red" />
         </TouchableOpacity>
       </View>
       <View style={styles.outerContainer}>

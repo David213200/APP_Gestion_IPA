@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet, Platform, Image } from 'react-native';
+import { View, Text, ScrollView, TextInput, StyleSheet, Platform, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
 import { Picker } from '@react-native-picker/picker';
 import { database } from '../services/credentials';
 import { ref, get } from 'firebase/database';
+import MaterialIcons from'react-native-vector-icons/MaterialIcons';
 
-export default function DBViewScreen() {
+const DBViewScreen = ({ navigation, route }) => { 
   const [lista, setLista] = useState([]);
   const [filteredLista, setFilteredLista] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,9 @@ export default function DBViewScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Image source={require('./../../assets/logo.png')} style={styles.logo} resizeMode="stretch" />
+      <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
+        <MaterialIcons name="logout" size={30} color="red" />
+      </TouchableOpacity>
       <TextInput
         style={styles.searchInput}
         placeholder="Buscar por nombre de alumno..."
@@ -197,3 +201,5 @@ const styles = StyleSheet.create({
   }
   
 });
+
+export default DBViewScreen;

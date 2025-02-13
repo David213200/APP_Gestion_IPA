@@ -1,30 +1,19 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, ScrollView, Button } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, TouchableOpacity, Text, ScrollView, Button } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import styles from './../StyleSheet/styles';
 
-const ProfessorScreen = ({ route }) => {
-  const navigation = useNavigation();
+const ProfessorScreen = ({ navigation, route }) => {
   const name = route.params?.name || 'Desconocido'; // Manejo de parámetros inexistentes
   const userInfo = route.params?.user || {}; // Recibe el usuario desde LoginScreen
   
-  function handleLogout() {
-    try {
-      navigation.replace("Home"); // Envía al usuario a la pantalla de login
-      console.log("Sesión cerrada correctamente");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    }
-  }
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>IPA Profesor</Text>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <MaterialIcons name="logout" size={24} color="white" />
+        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
+          <MaterialIcons name="logout" size={30} color="red" />
         </TouchableOpacity>
       </View>
 

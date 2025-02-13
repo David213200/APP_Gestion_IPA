@@ -4,14 +4,10 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { makeRedirectUri } from "expo-auth-session";
 
-import { useNavigation } from "@react-navigation/native";
-
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen() {
+const LoginScreen = ({ navigation, route }) => { 
   const [userInfo, setUserInfo] = useState(null);
-  const navigation = useNavigation(); 
-
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: "787603279609-3pcr1587qo7momb2s33o70phnk7q2d86.apps.googleusercontent.com",
@@ -110,3 +106,5 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 });
+
+export default LoginScreen;
