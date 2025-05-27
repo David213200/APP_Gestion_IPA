@@ -1,0 +1,56 @@
+  Code:
+
+  <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <MaterialIcons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Vista Base de Datos</Text>
+          
+          <Pressable 
+            onPress={() => navigation.navigate("Home")}
+            style={({ pressed }) => [
+              styles.logoutButton,
+              //{ transform: [{ scale: pressed ? 0.95 : 1 }] }
+            ]}
+          >
+            <LinearGradient colors={['#E74C3C', '#C0392B']} style={styles.logoutGradient}>
+              <Feather name="power" size={20} color="white" />
+            </LinearGradient>
+          </Pressable>
+        </View>
+  
+
+  Estilos:
+  
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  logoutButton: {
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  logoutGradient: {
+    padding: 12,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },

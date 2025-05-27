@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, Animated, Pressable, Image, StyleSheet } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { makeRedirectUri } from "expo-auth-session";
+import { MaterialIcons, Feather } from '@expo/vector-icons';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation, route }) => { 
   const [userInfo, setUserInfo] = useState(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(100)).current;
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: "787603279609-3pcr1587qo7momb2s33o70phnk7q2d86.apps.googleusercontent.com",
@@ -26,6 +30,22 @@ const LoginScreen = ({ navigation, route }) => {
     if (profesores.includes(email)) return "Profesor";
     return "Estudiante"; // Todos los demás serán estudiantes por defecto
   }
+
+    useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        speed: 5,
+        bounciness: 10,
+        useNativeDriver: true
+      })
+    ]).start();
+  }, []);
 
   useEffect(() => {
     if (response?.type === "success") {
@@ -61,49 +81,104 @@ const LoginScreen = ({ navigation, route }) => {
   }
 
   return (
-    <View style={styles.loginContainer}>
-      <Image source={require('./../../assets/logo.png')} style={styles.logo} resizeMode="stretch" />
+    <LinearGradient colors={['#0f3057', '#00587a', '#008891']} style={styles.gradient}>
+      <View style={styles.container}>
+        <Animated.View style={[styles.logoContainer, {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }]}>
+          <Image 
+            source={require('./../../assets/logo.png')} 
+            style={styles.logo} 
+            resizeMode="contain"
+          />
+        </Animated.View>
 
-      <TouchableOpacity style={styles.loginButton} onPress={() => promptAsync()} disabled={!request}>
-        <Text style={styles.loginButtonText}>Iniciar sesión con Google</Text>
-      </TouchableOpacity>
+        <Animated.View style={[styles.buttonContainer, { opacity: fadeAnim }]}>
+          <Pressable 
+            style={({ pressed }) => [
+              styles.loginButton,
+              { transform: [{ scale: pressed ? 0.95 : 1 }] }
+            ]}
+            onPress={() => promptAsync()} 
+            disabled={!request}
+          >
+            <LinearGradient
+              colors={['#4CAF50', '#45a049']}
+              style={styles.buttonGradient}
+            >
+              <MaterialIcons name="login" size={24} color="white" />
+              <Text style={styles.loginButtonText}>Iniciar sesión con Google</Text>
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
 
-    </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>IPA Education Suite v1.0</Text>
+        </View>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({ 
-  loginContainer: {
+  gradient: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#5f8e4e", // Fondo naranja claro
-    borderWidth: 2,
-    borderColor: "orange",
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
-  loginButton: {
-    backgroundColor: "orange",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginTop: 10,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 25,
   },
-  loginButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+  logoContainer: {
+    marginBottom: 50,
   },
   logo: {
     width: 300,
-    height: 100,
-    alignSelf: 'center',
-    marginBottom: 20,
+    height: 150,
+    tintColor: 'white',
+  },
+  buttonContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  loginButton: {
+    width: '80%',
+    borderRadius: 15,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  buttonGradient: {
+    paddingVertical: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 15,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 30,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    width: '100%',
+  },
+  footerText: {
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    fontSize: 12,
+    letterSpacing: 1,
   },
 });
 

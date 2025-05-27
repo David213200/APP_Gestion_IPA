@@ -1,88 +1,228 @@
-import React from 'react';
-import { View, TouchableOpacity, ScrollView, Text, StyleSheet } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
+import { View, ScrollView, Text, StyleSheet, Animated, Pressable } from 'react-native';
+import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const AdminScreen = ({ navigation, route }) => {
-  const userInfo = route.params?.user || {}; 
+  const userInfo = route.params?.user || {};
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        speed: 5,
+        bounciness: 10,
+        useNativeDriver: true
+      })
+    ]).start();
+  }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollViewContent}>
-      <View style={styles.header}>
-        <Text style={styles.title}>IPA Profesor</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
-          <MaterialIcons name="logout" size={30} color="red" />
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.welcomeText}>Bienvenido, {userInfo.name}!</Text>
-      <View style={styles.outerContainer}>
-        <View style={styles.container}>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Create')}>
-            <Text style={styles.buttonText}>Crear Datos</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('DBView')}>
-            <Text style={styles.buttonText}>Consultar Datos</Text>
-          </TouchableOpacity>
+    <LinearGradient
+      colors={['#0f3057', '#00587a', '#008891']}
+      style={styles.gradient}
+    >
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <View style={styles.header}>
+          <LinearGradient
+            colors={['#4CAF50', '#45a049']}
+            style={styles.profileContainer}
+          >
+            <Text style={styles.profileText}>
+              {userInfo.name?.charAt(0).toUpperCase() || 'A'}
+            </Text>
+          </LinearGradient>
+          
+          <Pressable 
+            onPress={() => navigation.navigate("Home")}
+            style={({ pressed }) => [
+              styles.logoutButton,
+              { transform: [{ scale: pressed ? 0.95 : 1 }] }
+            ]}
+          >
+            <Feather name="power" size={24} color="white" />
+          </Pressable>
         </View>
-      </View>
-    </ScrollView>
+
+        <Animated.Text 
+          style={[
+            styles.welcomeText,
+            { opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-20, 0]
+            }) }] }
+          ]}
+        >
+          Bienvenido, {userInfo.name}!
+        </Animated.Text>
+
+        <Animated.View 
+          style={[
+            styles.outerContainer,
+            { transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          <View style={styles.blurEffect} />
+          <View style={styles.container}>
+
+          <Pressable 
+              style={({ pressed }) => [
+                styles.button,
+                { transform: [{ scale: pressed ? 0.95 : 1 }] }
+              ]}
+              onPress={() => navigation.navigate('DBView', { userRole: 'admin'})}
+            >
+              <LinearGradient
+                colors={['#2196F3', '#1976D2']}
+                style={styles.buttonGradient}
+              >
+                <FontAwesome5 name="database" size={24} color="white" />
+                <Text style={styles.buttonText}>Explorar Proyectos</Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable 
+              style={({ pressed }) => [
+                styles.button,
+                { transform: [{ scale: pressed ? 0.95 : 1 }] }
+              ]}
+              onPress={() => navigation.navigate('GestionDB', { userRole: 'admin'})}
+            >
+              <LinearGradient
+                colors={['#4CAF50', '#45a049']}
+                style={styles.buttonGradient}
+              >
+                <FontAwesome5 name="plus-circle" size={24} color="white" />
+                <Text style={styles.buttonText}>Edicion de Base de Datos</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </Animated.View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>IPA School Projects Manager v1.0</Text>
+        </View>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   scrollViewContent: {
     flexGrow: 1,
-    backgroundColor: '#1B5E20', // Verde fuerte
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    padding: 25,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems:'center',
+    alignItems: 'center',
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 30,
+    marginTop: 15,
   },
-  title: {
+  profileContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  profileText: {
+    color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
   },
   logoutButton: {
-    backgroundColor: 'orange',
-    padding: 10,
-    borderRadius: 10,
+    backgroundColor: '#e53935',
+    padding: 12,
+    borderRadius: 25,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
   },
   welcomeText: {
-    fontSize: 18,
+    fontSize: 24,
     color: 'white',
-    marginBottom: 20,
+    fontWeight: '300',
+    letterSpacing: 1.2,
+    marginBottom: 40,
+    textAlign: 'center',
   },
   outerContainer: {
     width: '100%',
     alignItems: 'center',
+    position: 'relative',
+  },
+  blurEffect: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    width: '95%',
+    height: '105%',
+    top: -10,
+    transform: [{ rotate: '3deg' }],
   },
   container: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'orange',
-    width: '90%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    padding: 25,
+    borderRadius: 20,
+    width: '100%',
     alignItems: 'center',
+    backdropFilter: 'blur(10px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   button: {
-    backgroundColor: 'orange',
-    padding: 15,
-    borderRadius: 10,
-    width: '80%',
+    width: '100%',
+    marginVertical: 15,
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  buttonGradient: {
+    paddingVertical: 20,
+    paddingHorizontal: 25,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
+    justifyContent: 'center',
+    gap: 15,
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+  },
+  footer: {
+    marginTop: 40,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    width: '100%',
+  },
+  footerText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    fontSize: 12,
+    letterSpacing: 1,
   },
 });
 

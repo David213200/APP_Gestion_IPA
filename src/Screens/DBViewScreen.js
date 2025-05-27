@@ -1,18 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet, Platform, Image, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; 
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  ScrollView, 
+  Platform, 
+  Dimensions, 
+  TouchableOpacity,
+  ActivityIndicator
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { database } from '../services/credentials';
 import { ref, get } from 'firebase/database';
-import MaterialIcons from'react-native-vector-icons/MaterialIcons';
 
-const DBViewScreen = ({ navigation, route }) => { 
+const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
+
+const DBViewScreen = ({ navigation, route }) => {
+  // Estado básico
   const [lista, setLista] = useState([]);
   const [filteredLista, setFilteredLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [nivelSeleccionado, setNivelSeleccionado] = useState('');
+  const scrollViewRef = useRef(null);
 
+  // Cargar datos sin animaciones
   useEffect(() => {
     const getLista = async () => {
       try {
@@ -52,6 +67,24 @@ const DBViewScreen = ({ navigation, route }) => {
     getLista();
   }, []);
 
+  const renderItem = (item) => (
+    <View key={item.id} style={styles.content}>
+      <View style={styles.itemHeader}>
+        <Text style={styles.levelBadge}>{item.nivel.toUpperCase()} ESO</Text>
+      </View>
+      
+      <Text style={styles.title}>{item.alumno || 'N/A'}</Text>
+      
+      {item.proyectos && Object.entries(item.proyectos).map(([key, value], index) => (
+        <View key={`${item.id}-${key}-${index}`} style={styles.projectRow}>
+          <Text style={styles.projectText}>
+            <Text style={styles.projectLabel}>{key}:</Text> {value}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+
   const handleSearch = (text) => {
     setSearch(text);
     let filteredData = lista;
@@ -69,137 +102,223 @@ const DBViewScreen = ({ navigation, route }) => {
     setFilteredLista(filteredData);
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <Image source={require('./../../assets/logo.png')} style={styles.logo} resizeMode="stretch" />
-      <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
-        <MaterialIcons name="logout" size={30} color="red" />
-      </TouchableOpacity>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Buscar por nombre de alumno..."
-        value={search}
-        onChangeText={handleSearch}
-      />
-  
-      <Picker
-        selectedValue={nivelSeleccionado}
-        style={styles.picker}
-        onValueChange={(itemValue) => {
-          setNivelSeleccionado(itemValue);
-          handleSearch(search);
-        }}
-      >
-        <Picker.Item label="Todos los cursos" value="" />
-        <Picker.Item label="1r ESO" value="1r" />
-        <Picker.Item label="2n ESO" value="2n" />
-        <Picker.Item label="3r ESO" value="3r" />
-        <Picker.Item label="4t ESO" value="4t" />
-      </Picker>
-  
-      {Platform.OS === 'web' ? (
-        <div style={styles.webContainer}>
-          {filteredLista.map((item) => (
-            <View key={item.id} style={styles.content}>
-              <Text style={styles.title}>Alumno/a:</Text>
-              <Text style={styles.value}>{item.alumno || 'N/A'}</Text>
+return (
+  <SafeAreaView style={{ flex: 1 }}>
+    <View style={styles.container}>
+      {/* Header simplificado */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Visualización Base de Datos</Text>
+        
+        <TouchableOpacity 
+          onPress={() => navigation.navigate("Home")}
+          style={styles.logoutButton}
+        >
+          <Text>Salir</Text>
+        </TouchableOpacity>
+      </View>
 
-              <Text style={styles.title}>Nivel ESO:</Text>
-              <Text style={styles.value}>{item.nivel || 'N/A'}</Text>
+      {/* Buscador simplificado */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar alumno..."
+          value={search}
+          onChangeText={handleSearch}
+        />
 
-              <Text style={styles.title}>Proyectos:</Text>
-              {item.proyectos && Object.entries(item.proyectos).map(([key, value], index) => (
-                <Text key={`${item.id}-${key}-${index}`} style={styles.projectText}>
-                  ➪ {key}: {value}
-                </Text>
-              ))}
-            </View>
-          ))}
-        </div>
-      ) : (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 50 }} keyboardShouldPersistTaps="handled">
-          {filteredLista.map((item) => (
-            <View key={item.id} style={styles.content}>
-              <Text style={styles.title}>{item.alumno}</Text>
-              <Text style={styles.projectText}>Nivel: {item.nivel}</Text>
-            </View>
-          ))}
-        </ScrollView>
-      )}
-    </SafeAreaView>
-  );
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={nivelSeleccionado}
+            style={styles.picker}
+            onValueChange={(itemValue) => {
+              setNivelSeleccionado(itemValue);
+              handleSearch(search);
+            }}
+          >
+            <Picker.Item label="Todos los cursos" value="" />
+            <Picker.Item label="1r ESO" value="1r" />
+            <Picker.Item label="2n ESO" value="2n" />
+            <Picker.Item label="3r ESO" value="3r" />
+            <Picker.Item label="4t ESO" value="4t" />
+          </Picker>
+        </View>
+      </View>
+
+      {/* Contenedor principal para el scroll */}
+      <View style={styles.scrollContainer}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+            <Text style={styles.loadingText}>Cargando datos...</Text>
+          </View>
+        ) : filteredLista.length === 0 ? (
+          <View style={styles.noResultsContainer}>
+            <Text style={styles.noResultsText}>No se encontraron resultados</Text>
+          </View>
+        ) : isWeb ? (
+          <View style={styles.webContent}>
+            {filteredLista.map(renderItem)}
+          </View>
+        ) : (
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={styles.mobileContent}
+            showsVerticalScrollIndicator={true}
+          >
+            {filteredLista.map(renderItem)}
+            <View style={{ height: 50 }} />
+          </ScrollView>
+        )}
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Gestión de Proyectos v1.0</Text>
+      </View>
+    </View>
+  </SafeAreaView>
+);
 }
 
-const styles = StyleSheet.create({
+// Estilos básicos y simplificados
+const styles = {
   container: {
     flex: 1,
-    backgroundColor: '#1B5E20', // Verde fuerte
-    padding: 20,
+    backgroundColor: '#f5f5f5',
+    height: isWeb ? '100%' : undefined, // Esto fuerza el alto completo en web
   },
-  logo: {
-    width: 300,
-    height: 100,
-    alignSelf: 'center',
-    marginBottom: 20,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
-  picker: {
-    height: 50,
-    width: '80%',
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#FF9800', // Naranja suave
-    marginBottom: 20,
-    alignSelf: 'center',
-  },
-  searchInput: {
-    height: 50,
-    width: '80%',
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#FF9800',
-    marginBottom: 20,
-    alignSelf: 'center',
-    paddingHorizontal: 15,
-  },
-  content: {
-    marginBottom: 20,
-    padding: 15,
-    borderRadius: 10,
-    backgroundColor: '#FFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  title: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#1B5E20', // Verde fuerte
   },
-  value: {
+  backButton: {
+    padding: 8,
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  searchContainer: {
+    padding: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 8,
+    marginBottom: 10,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  picker: {
+    height: 40,
+  },
+  // Contenedor para el ScrollView
+  scrollContainer: {
+    backgroundColor: '#fff',
+  },
+  webContent: {
+    padding: 20,
+    flex: 1,
+    overflowY: 'auto',     
+    overflowX: 'hidden',   
+    maxHeight: '80vh',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  mobileContent: {
+    padding: 10,
+  },
+  // Item individual
+  content: {
+    width: isWeb ? (width > 768 ? '48%' : '100%') : '100%',
+    marginBottom: 15,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2, // Android
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 10,
+  },
+  levelBadge: {
+    fontWeight: 'bold',
+  },
+  title: {
     fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  projectRow: {
     marginBottom: 5,
-    color: '#333',
+  },
+  projectLabel: {
+    fontWeight: 'bold',
   },
   projectText: {
     fontSize: 14,
-    marginBottom: 5,
-    color: '#333', // Naranja suave
   },
-  webContainer: {
+  // Estados de carga y sin resultados
+  loadingContainer: {
     flex: 1,
-    overflowY: 'auto',
-    maxHeight: '70vh',
-    border: '2px solid orange', // Borde naranja
-    padding: 10, // Espaciado interno
-    borderRadius: 10, // Bordes redondeados
-    backgroundColor: '#FFF3E0', // Fondo color naranja claro
-  }
-  
-});
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+  },
+  // Footer
+  footer: {
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    backgroundColor: '#f0f0f0',
+  },
+  footerText: {
+    textAlign: 'center',
+    fontSize: 12,
+  },
+};
 
 export default DBViewScreen;
+
+
+

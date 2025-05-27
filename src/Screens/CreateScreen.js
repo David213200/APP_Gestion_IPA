@@ -1,17 +1,61 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity } from 'react-native';
-import MaterialIcons from'react-native-vector-icons/MaterialIcons';
+import { 
+  ScrollView, 
+  Text, 
+  StyleSheet, 
+  SafeAreaView, 
+  View,
+  Dimensions 
+} from 'react-native';
 
-import styles from './../StyleSheet/styles';
-const CreateScreen = ({ navigation, route }) => {
-    
+const { height } = Dimensions.get('window');
+
+const ScrollScreen = () => {
+  // Texto más largo que la pantalla
+  const longText = Array(100).fill("Lorem ipsum dolor sit amet. ").join('\n');
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
-        <MaterialIcons name="logout" size={30} color="red" />
-      </TouchableOpacity>
+
+    <ScrollView 
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <Text style={styles.title}>TEST DE SCROLL</Text>
+      <Text style={styles.text}>{longText}</Text>
     </ScrollView>
+
   );
 };
 
-export default CreateScreen;
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'red', // Color de debug
+  },
+  outerContainer: {
+    flex: 1,
+    backgroundColor: 'blue', // Color de debug
+    padding: 10,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: 'green', // Color de debug
+  },
+  contentContainer: {
+    padding: 20,
+    minHeight: height * 2, // Forzar altura 200% de la pantalla
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 20,
+  },
+  text: {
+    fontSize: 16,
+    color: 'white',
+    lineHeight: 24,
+  },
+});
+
+export default ScrollScreen;

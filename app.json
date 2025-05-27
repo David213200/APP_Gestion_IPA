@@ -18,7 +18,6 @@
     },
     "android": {
       "adaptiveIcon": {
-        "package": "com.ipa.app",
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       }
