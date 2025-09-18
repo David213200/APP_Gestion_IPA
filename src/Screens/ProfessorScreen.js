@@ -106,7 +106,7 @@ const ProfessorScreen = ({ navigation, route }) => {
                 styles.actionButton,
                 { transform: [{ scale: pressed ? 0.95 : 1 }] }
               ]}
-              onPress={() => navigation.navigate('Proyectos', { userRole: 'professor' })}
+              onPress={() => navigation.navigate('Proyectos', { user: userInfo, role: 'professor' })}
               >
                 <LinearGradient
                   colors={['#4CAF50', '#45a049']}

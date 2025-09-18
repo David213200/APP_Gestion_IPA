@@ -7,13 +7,17 @@ import {
   Platform, 
   Dimensions, 
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  Pressable,
+  StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { database } from '../services/credentials';
 import { ref, get } from 'firebase/database';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
@@ -103,24 +107,24 @@ const DBViewScreen = ({ navigation, route }) => {
   };
 
 return (
-  <SafeAreaView style={{ flex: 1 }}>
-    <View style={styles.container}>
-      {/* Header simplificado */}
+  <LinearGradient colors={['#0f3057', '#00587a', '#008891']} style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialIcons name="arrow-back" size={24} color="black" />
+          <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Visualización Base de Datos</Text>
-        
-        <TouchableOpacity 
+        <Pressable 
           onPress={() => navigation.navigate("Home")}
           style={styles.logoutButton}
         >
-          <Text>Salir</Text>
-        </TouchableOpacity>
+          <LinearGradient colors={['#E74C3C', '#C0392B']} style={styles.logoutGradient}>
+            <Feather name="power" size={20} color="white" />
+          </LinearGradient>
+        </Pressable>
       </View>
 
       {/* Buscador simplificado */}
@@ -180,143 +184,184 @@ return (
       <View style={styles.footer}>
         <Text style={styles.footerText}>Gestión de Proyectos v1.0</Text>
       </View>
-    </View>
-  </SafeAreaView>
+    </SafeAreaView>
+  </LinearGradient>
 );
 }
 
 // Estilos básicos y simplificados
-const styles = {
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    height: isWeb ? '100%' : undefined, // Esto fuerza el alto completo en web
-  },
+const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   backButton: {
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   logoutButton: {
-    padding: 8,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  logoutGradient: {
+    padding: 12,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#223047', // Azul oscuro de fondo general
+    height: isWeb ? '100%' : undefined,
   },
   searchContainer: {
-    padding: 10,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    padding: 14,
+    backgroundColor: 'rgba(41,128,185,0.13)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   searchInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 8,
-    marginBottom: 10,
+    flex: 1,
+    borderWidth: 0,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    color: '#fff',
+    fontSize: 15,
+    marginRight: 8,
   },
   pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    marginBottom: 10,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(41,128,185,0.18)',
+    marginLeft: 8,
+    flex: 0.7,
   },
   picker: {
     height: 40,
+    color: '#fff',
+    backgroundColor: 'transparent',
   },
-  // Contenedor para el ScrollView
   scrollContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   webContent: {
     padding: 20,
     flex: 1,
-    overflowY: 'auto',     
-    overflowX: 'hidden',   
+    overflowY: 'auto',
+    overflowX: 'hidden',
     maxHeight: '80vh',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'flex-start',
+    gap: 24,
   },
   mobileContent: {
-    padding: 10,
+    padding: 14,
   },
-  // Item individual
   content: {
-    width: isWeb ? (width > 768 ? '48%' : '100%') : '100%',
-    marginBottom: 15,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    backgroundColor: '#fff',
+    width: isWeb ? (width > 900 ? '31%' : width > 600 ? '48%' : '100%') : '100%',
+    minHeight: 440,      // Alto mínimo para tarjetas pequeñas
+    maxHeight: 440,      // Alto máximo para igualar todas
+    maxWidth: 440,       // Ancho máximo para que no se estiren demasiado
+    marginBottom: 24,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.90)', // Fondo claro para la tarjeta
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2, // Android
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(52,152,219,0.10)',
+    justifyContent: 'flex-start',
+    overflow: 'hidden',  // Oculta el contenido que se salga
   },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   levelBadge: {
     fontWeight: 'bold',
+    color: '#16A085',
+    backgroundColor: 'rgba(22,160,133,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+    fontSize: 13,
+    overflow: 'hidden',
   },
   title: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#223047', // Texto oscuro
     marginBottom: 10,
+    letterSpacing: 0.2,
   },
   projectRow: {
-    marginBottom: 5,
+    marginBottom: 6,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(41,128,185,0.08)', // Azul muy suave
   },
   projectLabel: {
     fontWeight: 'bold',
+    color: '#16A085', // Verde para destacar
+    fontSize: 14,
   },
   projectText: {
     fontSize: 14,
+    color: '#223047', // Texto oscuro
   },
-  // Estados de carga y sin resultados
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 40,
   },
   loadingText: {
     marginTop: 10,
+    color: '#fff',
+    fontSize: 16,
   },
   noResultsContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 40,
   },
   noResultsText: {
     fontSize: 16,
+    color: '#fff',
+    opacity: 0.7,
   },
-  // Footer
   footer: {
     padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    backgroundColor: '#f0f0f0',
+    borderTopWidth: 0,
+    backgroundColor: 'rgba(44,62,80,0.95)',
   },
   footerText: {
     textAlign: 'center',
     fontSize: 12,
+    color: '#fff',
+    opacity: 0.7,
   },
-};
+});
 
 export default DBViewScreen;
 

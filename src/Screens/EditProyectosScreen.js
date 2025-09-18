@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Picker } from '@react-native-picker/picker';
 import { Feather } from '@expo/vector-icons';
 import { database } from '../services/credentials';
-import { ref, update } from 'firebase/database';
+import { ref, update, get } from 'firebase/database';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const EditProyectosScreen = ({ navigation, route }) => {
@@ -27,6 +27,8 @@ const EditProyectosScreen = ({ navigation, route }) => {
   const [total, setTotal] = useState('0');
   const [totalAcabades, setTotalAcabades] = useState('0');
   const [loading, setLoading] = useState(false);
+  const [catalogoProyectos, setCatalogoProyectos] = useState([]);
+  const [catalogoLoading, setCatalogoLoading] = useState(true);
 
   useEffect(() => {
     if (student.proyectos) {
@@ -40,6 +42,27 @@ const EditProyectosScreen = ({ navigation, route }) => {
       setTotal(proyectosData._total?.toString() || '0');
       setTotalAcabades(proyectosData._total_acabades?.toString() || '0');
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchCatalogo = async () => {
+      try {
+        const refCat = ref(database, 'CatalogoProyectos');
+        const snap = await get(refCat);
+        if (snap.exists()) {
+          const arr = Object.values(snap.val()).map(p => ({
+            nombre: p.nombre,
+            profesor: p.profesor
+          }));
+          setCatalogoProyectos(arr);
+        }
+      } catch (e) {
+        console.error("Error cargando catálogo:", e);
+      } finally {
+        setCatalogoLoading(false);
+      }
+    };
+    fetchCatalogo();
   }, []);
 
   const handleProjectChange = (index, field, value) => {
@@ -131,14 +154,24 @@ const EditProyectosScreen = ({ navigation, route }) => {
                     </Pressable>
                   </View>
     
-                  <Text style={styles.label}>Nombre del Proyecto</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={project.nombre}
-                    onChangeText={(text) => handleProjectChange(index, 'nombre', text)}
-                    placeholder="Nombre del proyecto"
-                    placeholderTextColor="#95a5a6"
-                  />
+                  <Text style={styles.label}>Nom del Projecte</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={project.nombre}
+                      onValueChange={(value) => handleProjectChange(index, 'nombre', value)}
+                      dropdownIconColor="#4ECDC4"
+                    >
+                      <Picker.Item label="Selecciona un projecte..." value="" />
+                      {catalogoProyectos.map((p, idx) => (
+                        <Picker.Item key={idx} label={p.nombre} value={p.nombre} />
+                      ))}
+                    </Picker>
+                  </View>
+                  {project.nombre ? (
+                    <Text style={{ color: '#4ECDC4', marginTop: 5 }}>
+                      Professor creador: {catalogoProyectos.find(p => p.nombre === project.nombre)?.profesor || '—'}
+                    </Text>
+                  ) : null}
     
                   <Text style={styles.label}>Estado</Text>
                   <View style={styles.pickerContainer}>
@@ -160,14 +193,24 @@ const EditProyectosScreen = ({ navigation, route }) => {
               <View style={styles.newProjectContainer}>
                 <Text style={styles.sectionTitle}>Añadir Nuevo Proyecto</Text>
     
-                <Text style={styles.label}>Nombre del Proyecto</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newProjectName}
-                  onChangeText={setNewProjectName}
-                  placeholder="Ej: Nou projecte"
-                  placeholderTextColor="#95a5a6"
-                />
+                <Text style={styles.label}>Nom del Projecte</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={newProjectName}
+                    onValueChange={setNewProjectName}
+                    dropdownIconColor="#4ECDC4"
+                  >
+                    <Picker.Item label="Selecciona un projecte..." value="" />
+                    {catalogoProyectos.map((p, idx) => (
+                      <Picker.Item key={idx} label={p.nombre} value={p.nombre} />
+                    ))}
+                  </Picker>
+                </View>
+                {newProjectName ? (
+                  <Text style={{ color: '#4ECDC4', marginTop: 5 }}>
+                    Professor creador: {catalogoProyectos.find(p => p.nombre === newProjectName)?.profesor || '—'}
+                  </Text>
+                ) : null}
     
                 <Text style={styles.label}>Estado Inicial</Text>
                 <View style={styles.pickerContainer}>
@@ -177,10 +220,7 @@ const EditProyectosScreen = ({ navigation, route }) => {
                     dropdownIconColor="#4ECDC4"
                   >
                     <Picker.Item label="Assignada" value="Assignada" />
-                    <Picker.Item label="Acabada" value="Acabada" />
                     <Picker.Item label="En curs" value="En curs" />
-                    <Picker.Item label="1r trim" value="1r trim" />
-                    <Picker.Item label="2n trim" value="2n trim" />
                   </Picker>
                 </View>
     

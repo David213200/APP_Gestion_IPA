@@ -1,325 +1,289 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, ScrollView, Text, Modal, Animated, Pressable } from 'react-native';
-import { MaterialIcons, Feather, FontAwesome5 } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ref, get } from 'firebase/database';
+import { database } from '../services/credentials';
+import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+
 
 const StudentScreen = ({ route, navigation }) => {
-  const name = route.params?.name || 'Desconocido';
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
+  const user = route.params.user;
+  const [proyectos, setProyectos] = useState([]);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        speed: 5,
-        bounciness: 10,
-        useNativeDriver: true
-      })
-    ]).start();
+    const cargarProyectosAlumno = async () => {
+      const proyectosRef = ref(database, 'proyectos');
+      const snapshot = await get(proyectosRef);
+
+      if (snapshot.exists()) {
+        const niveles = snapshot.val();
+        const proyectosDelAlumno = [];
+
+        Object.values(niveles).forEach((nivel) => {
+          Object.values(nivel).forEach((proyecto) => {
+            if (proyecto.correo === user.correo) {
+              proyectosDelAlumno.push(proyecto);
+            }
+          });
+        });
+
+        setProyectos(proyectosDelAlumno);
+      }
+    };
+
+    cargarProyectosAlumno();
   }, []);
 
-  const projects = [
-    { id: 1, name: "Proyecto 1", icon: 'rocket' },
-    { id: 2, name: "Proyecto 2", icon: 'flask' },
-    { id: 3, name: "Proyecto 3", icon: 'code' },
-    { id: 4, name: "Proyecto 4", icon: 'chart-line' },
-  ];
+  // Agrupa los proyectos por estado
+  const proyectosNormales = proyectos.flatMap(proy =>
+    Object.entries(proy.proyectos || {})
+      .filter(([key]) => !key.startsWith('_'))
+      .map(([key, value]) => ({
+        nombre: key,
+        estado: value,
+        alumno: proy.alumno,
+        tutor: proy.tutor,
+        nivel: proy.nivel,
+      }))
+  );
 
-  const openProjectDetails = (project) => {
-    setSelectedProject(project);
-    setModalVisible(true);
-  };
+  const proyectosPorEstado = proyectosNormales.reduce((acc, proyecto) => {
+    const estado = proyecto.estado;
+    if (!acc[estado]) acc[estado] = [];
+    acc[estado].push(proyecto);
+    return acc;
+  }, {});
+
+  // Extrae los totales del primer proyecto (si existen)
+  const totales = proyectos.length > 0
+    ? Object.entries(proyectos[0].proyectos || {})
+        .filter(([key]) => key.startsWith('_'))
+        .map(([key, value]) => ({ key, value }))
+    : [];
 
   return (
-    <LinearGradient
-      colors={['#2C3E50', '#3498DB', '#2980B9']}
-      style={styles.gradient}
-    >
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.header}>
-          <LinearGradient
-            colors={['#1ABC9C', '#16A085']}
-            style={styles.profileContainer}
-          >
-            <Text style={styles.profileText}>
-              {name?.charAt(0).toUpperCase() || 'E'}
-            </Text>
-          </LinearGradient>
-          
-          <Pressable 
-            onPress={() => navigation.navigate("Home")}
-            style={({ pressed }) => [
-              styles.logoutButton,
-              { transform: [{ scale: pressed ? 0.95 : 1 }] }
-            ]}
-          >
-            <Feather name="power" size={24} color="white" />
-          </Pressable>
-        </View>
-
-        <Animated.Text 
-          style={[
-            styles.welcomeText,
-            { 
-              opacity: fadeAnim,
-              transform: [{ translateY: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-20, 0]
-              }) }]
-            }
-          ]}
+    <LinearGradient colors={['#2C3E50', '#3498DB', '#2980B9']} style={{ flex: 1 }}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Informacion Alumno</Text>
+        
+        <TouchableOpacity 
+          onPress={() => navigation.navigate("Home")}
+          style={styles.logoutButton}
         >
-          Bienvenido {name}, ¡a crear!
-        </Animated.Text>
+          <Text>Salir</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>
+          Bienvenido {user.nombre}, estos son tus proyectos:
+        </Text>
 
-        <Animated.View 
-          style={[
-            styles.outerContainer,
-            { transform: [{ translateY: slideAnim }] }
-          ]}
-        >
-          <View style={styles.blurEffect} />
-          <View style={styles.container}>
-            <Text style={styles.sectionTitle}>Tus Proyectos</Text>
-            
-            <View style={styles.projectsGrid}>
-              {projects.map((project) => (
-                <Pressable 
-                  key={project.id} 
-                  style={({ pressed }) => [
-                    styles.projectCard,
-                    { transform: [{ scale: pressed ? 0.95 : 1 }] }
-                  ]}
-                  onPress={() => openProjectDetails(project)}
-                >
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-                    style={styles.projectGradient}
-                  >
-                    <FontAwesome5 
-                      name={project.icon} 
-                      size={28} 
-                      color="#1ABC9C" 
-                      style={styles.projectIcon}
-                    />
-                    <Text style={styles.projectText}>{project.name}</Text>
-                  </LinearGradient>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </Animated.View>
+        {proyectos.length === 0 ? (
+          <Text style={styles.noProyectos}>No tienes proyectos asignados.</Text>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.nombre}>{proyectos[0].alumno}</Text>
+            <Text style={styles.tutor}>Tutor: {proyectos[0].tutor}</Text>
+            <Text style={styles.nivel}>Nivel: {proyectos[0].nivel}</Text>
 
-        <Modal visible={modalVisible} transparent={true} animationType="fade">
-          <View style={styles.modalOverlay}>
-            <LinearGradient
-              colors={['#2C3E50', '#34495E']}
-              style={styles.modalContainer}
-            >
-              <Text style={styles.modalTitle}>{selectedProject?.name}</Text>
-              
-              <View style={styles.modalContent}>
-                <View style={styles.infoRow}>
-                  <Feather name="calendar" size={20} color="#1ABC9C" />
-                  <Text style={styles.infoText}>Fecha de Iniciación: 01/01/2023</Text>
-                </View>
-                
-                <View style={styles.infoRow}>
-                  <FontAwesome5 name="chalkboard-teacher" size={20} color="#1ABC9C" />
-                  <Text style={styles.infoText}>Tutor: John Doe</Text>
-                </View>
-                
-                <View style={styles.infoRow}>
-                  <MaterialIcons name="description" size={20} color="#1ABC9C" />
-                  <Text style={styles.infoText}>Información: Lorem ipsum dolor sit amet.</Text>
-                </View>
+            {/* Totales */}
+            {totales.length > 0 && (
+              <View style={styles.totalesContainer}>
+                {totales.map(({ key, value }) => (
+                  <Text key={key} style={styles.totalesText}>
+                    {key.replace('_', '').toUpperCase()}: {value}
+                  </Text>
+                ))}
               </View>
+            )}
 
-              <Pressable 
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  { transform: [{ scale: pressed ? 0.95 : 1 }] }
-                ]}
-                onPress={() => setModalVisible(false)}
-              >
-                <LinearGradient
-                  colors={['#1ABC9C', '#16A085']}
-                  style={styles.closeGradient}
-                >
-                  <Text style={styles.closeButtonText}>Cerrar</Text>
-                </LinearGradient>
-              </Pressable>
-            </LinearGradient>
+            {/* Proyectos agrupados por estado */}
+            {Object.entries(proyectosPorEstado).map(([estado, proyectosArr]) => (
+              <View key={estado} style={styles.estadoGroup}>
+                <View style={[styles.estadoHeader, { backgroundColor: getColorByEstado(estado) }]}>
+                  <Text style={styles.estadoHeaderText}>
+                    <FontAwesome5 name="tasks" size={16} /> {estado}
+                  </Text>
+                  <View style={styles.estadoBadge}>
+                    <Text style={styles.estadoBadgeText}>{proyectosArr.length}</Text>
+                  </View>
+                </View>
+                {proyectosArr.map((proy, idx) => (
+                  <View key={idx} style={styles.proyectoItem}>
+                    <FontAwesome5 name="folder-open" size={18} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.proyectoNombre}>{proy.nombre}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
           </View>
-        </Modal>
+        )}
       </ScrollView>
     </LinearGradient>
   );
 };
 
-const styles = {
-  gradient: {
-    flex: 1,
+// Función para asignar color según estado
+function getColorByEstado(estado) {
+  switch (estado.toLowerCase()) {
+    case 'assignada':
+      return '#f1c40f';
+    case 'acabada':
+      return '#27ae60';
+    case 'en curs':
+      return '#2980b9';
+    case '1r trim':
+      return '#8e44ad';
+    case '2n trim':
+      return '#e67e22';
+    case 'tancada':
+      return '#c0392b';
+    case '23-24':
+      return '#16a085';
+    default:
+      return '#34495e';
+  }
+}
+
+// Estilos profesionales
+const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    paddingBottom: 40,
   },
-  scrollViewContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    padding: 25,
+    headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
-  header: {
+    backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 0, 0, 0.08)',
+  },
+    header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    marginBottom: 30,
-    marginTop: 15,
-  },
-  profileContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-  },
-  profileText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  logoutButton: {
-    backgroundColor: '#E74C3C',
-    padding: 12,
-    borderRadius: 25,
-    elevation: 3,
+    padding: 14,
+    backgroundColor: 'rgba(44,62,80,0.97)',
+    borderBottomWidth: 0,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  welcomeText: {
-    fontSize: 24,
-    color: 'white',
-    fontWeight: '300',
-    letterSpacing: 1.2,
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  outerContainer: {
-    width: '100%',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  blurEffect: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
-    width: '95%',
-    height: '105%',
-    top: -10,
-    transform: [{ rotate: '2deg' }],
-  },
-  container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    padding: 25,
-    borderRadius: 20,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.08,
     shadowRadius: 6,
   },
-  sectionTitle: {
+  title: {
+    color: 'white',
+    fontSize: 24,
+    marginBottom: 20,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+    logoutButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 0, 0, 0.08)',
+  },
+  noProyectos: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 40,
+  },
+  card: {
+    padding: 20,
+    backgroundColor: '#1ABC9C',
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  nombre: {
     color: 'white',
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 25,
-    textAlign: 'center',
-    letterSpacing: 1,
+    fontWeight: 'bold',
+    marginBottom: 2,
   },
-  projectsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  tutor: {
+    color: 'white',
+    fontSize: 15,
+    marginBottom: 2,
   },
-  projectCard: {
-    width: '48%',
-    marginBottom: 15,
-    borderRadius: 15,
-    overflow: 'hidden',
-  },
-  projectGradient: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  projectIcon: {
+  nivel: {
+    color: 'white',
+    fontSize: 15,
     marginBottom: 10,
   },
-  projectText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+  totalesContainer: {
+    marginBottom: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  totalesText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(44,62,80,0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 8,
+    marginBottom: 4,
+    fontSize: 13,
   },
-  modalContainer: {
-    width: '85%',
-    borderRadius: 20,
-    padding: 25,
-    elevation: 10,
+  estadoGroup: {
+    marginBottom: 18,
   },
-  modalTitle: {
-    color: 'white',
-    fontSize: 22,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalContent: {
-    marginBottom: 25,
-  },
-  infoRow: {
+  estadoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
-    gap: 10,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  infoText: {
-    color: 'white',
-    fontSize: 14,
-    flexShrink: 1,
-  },
-  closeButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 15,
-  },
-  closeGradient: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: 'white',
+  estadoHeaderText: {
+    color: '#fff',
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: '600',
+    flex: 1,
+    letterSpacing: 0.5,
   },
-};
+  estadoBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  estadoBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  proyectoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(44,62,80,0.18)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+    marginLeft: 10,
+  },
+  proyectoNombre: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+});
 
 export default StudentScreen;

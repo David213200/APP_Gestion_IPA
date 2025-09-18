@@ -1,7 +1,9 @@
-import { initializeApp } from "firebase/app";
-import { getDatabase } from "firebase/database";
+import { initializeApp } from 'firebase/app';
+import { getDatabase } from 'firebase/database';
+import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Configuración de Firebase con la URL correcta
 const firebaseConfig = {
   apiKey: "AIzaSyDy5fUIBhZLpKBtGrLlfkf2b7hQxnvsq74",
   authDomain: "ipa-app-93325.firebaseapp.com",
@@ -9,12 +11,26 @@ const firebaseConfig = {
   storageBucket: "ipa-app-93325.appspot.com",
   messagingSenderId: "710571178171",
   appId: "1:710571178171:web:c0d9df9dc15dee8399d19e",
-  databaseURL: "https://ipa-app-93325-default-rtdb.europe-west1.firebasedatabase.app/" // URL correcta
+  databaseURL: "https://ipa-app-93325-default-rtdb.europe-west1.firebasedatabase.app/"
 };
 
-// Inicializar Firebase
-const appFirebase = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
-// Exportar la base de datos
-export const database = getDatabase(appFirebase);
-export default appFirebase;
+// Solución universal para inicialización de auth
+let auth;
+
+try {
+  if (Platform.OS === 'web') {
+    auth = getAuth(app);
+  } else {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+  }
+} catch (error) {
+  console.error("Error initializing auth:", error);
+  auth = getAuth(app); // Fallback
+}
+
+export { app, auth, database };

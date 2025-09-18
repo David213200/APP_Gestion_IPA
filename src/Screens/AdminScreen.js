@@ -1,12 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { View, ScrollView, Text, StyleSheet, Animated, Pressable } from 'react-native';
+ import { View, ScrollView, Text, StyleSheet, Animated, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getDatabase, ref, get, set, remove } from 'firebase/database';
 
 const AdminScreen = ({ navigation, route }) => {
   const userInfo = route.params?.user || {};
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(300)).current;
+  const [loadingPromocion, setLoadingPromocion] = React.useState(false);
 
   useEffect(() => {
     Animated.parallel([
@@ -23,6 +25,55 @@ const AdminScreen = ({ navigation, route }) => {
       })
     ]).start();
   }, []);
+
+  const ejecutarPromocion = async () => {
+    setLoadingPromocion(true);
+    try {
+      const db = getDatabase();
+      const cursos = ['1r', '2n', '3r', '4t'];
+      const ramas = cursos.map(c => `proyectos_sanitizado_${c}`);
+      const añoActual = new Date().getFullYear();
+
+      // 1. Mueve los de 4t a egresados y elimina de 4t
+      const ref4t = ref(db, `proyectos/${ramas[3]}`);
+      const snap4t = await get(ref4t);
+      const alumnos4t = snap4t.exists() ? snap4t.val() : {};
+
+      for (const [id, alumno] of Object.entries(alumnos4t)) {
+        const años = alumno.años ? [...alumno.años, añoActual] : [añoActual];
+        const proyectosPorAño = alumno.proyectosPorAño || {};
+        proyectosPorAño[añoActual] = alumno.proyectos || [];
+        await set(ref(db, `alumnos_egresados/${id}`), {
+          ...alumno,
+          años,
+          proyectosPorAño,
+          fecha_egreso: new Date().toISOString().slice(0,10)
+        });
+      }
+      await remove(ref4t);
+
+      // 2. Mueve 3r->4t, 2n->3r, 1r->2n (y elimina de origen)
+      for (let i = cursos.length - 2; i >= 0; i--) {
+        const refActual = ref(db, `proyectos/${ramas[i]}`);
+        const refSiguiente = ref(db, `proyectos/${ramas[i+1]}`);
+        const snap = await get(refActual);
+        const alumnos = snap.exists() ? snap.val() : {};
+
+        for (const [id, alumno] of Object.entries(alumnos)) {
+          const años = alumno.años ? [...alumno.años, añoActual] : [añoActual];
+          const proyectosPorAño = alumno.proyectosPorAño || {};
+          proyectosPorAño[añoActual] = alumno.proyectos || [];
+          await set(refSiguiente.child(id), { ...alumno, años, proyectosPorAño });
+        }
+        await remove(refActual);
+      }
+
+      Alert.alert("Promoción completada", "Todos los alumnos han sido promocionados correctamente.");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo completar la promoción:\n" + error.message);
+    }
+    setLoadingPromocion(false);
+  };
 
   return (
     <LinearGradient
@@ -103,8 +154,89 @@ const AdminScreen = ({ navigation, route }) => {
                 <Text style={styles.buttonText}>Edicion de Base de Datos</Text>
               </LinearGradient>
             </Pressable>
+
+            <Pressable 
+              style={({ pressed }) => [
+                styles.button,
+                { transform: [{ scale: pressed ? 0.95 : 1 }] }
+              ]}
+              onPress={() => navigation.navigate('GestionProyectos')}
+            >
+              <LinearGradient
+                colors={['#8e24aa', '#6a1b9a']}
+                style={styles.buttonGradient}
+              >
+                <FontAwesome5 name="tasks" size={24} color="white" />
+                <Text style={styles.buttonText}>Gestión de Proyectos</Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                { transform: [{ scale: pressed ? 0.95 : 1 }] }
+              ]}
+              onPress={() => {
+                Alert.alert(
+                  "¿Estás seguro?",
+                  "Esta acción moverá a todos los alumnos al siguiente curso, y los de 4º pasarán a la base de datos de egresados. Esta operación no se puede deshacer. ¿Quieres continuar?",
+                  [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Aceptar", style: "destructive", onPress: ejecutarPromocion }
+                  ]
+                );
+              }}
+            >
+              <LinearGradient
+                colors={['#e53935', '#b71c1c']}
+                style={styles.buttonGradient}
+              >
+                <FontAwesome5 name="arrow-up" size={24} color="white" />
+                <Text style={styles.buttonText}>Promocionar alumnos de curso</Text>
+              </LinearGradient>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                { transform: [{ scale: pressed ? 0.95 : 1 }] }
+              ]}
+              onPress={() => navigation.navigate('Egresados')}
+            >
+              <LinearGradient
+                colors={['#607d8b', '#455a64']}
+                style={styles.buttonGradient}
+              >
+                <FontAwesome5 name="user-graduate" size={24} color="white" />
+                <Text style={styles.buttonText}>Ver alumnos egresados</Text>
+              </LinearGradient>
+            </Pressable>
+            <Pressable 
+              style={({ pressed }) => [
+                styles.button,
+                { transform: [{ scale: pressed ? 0.95 : 1 }] }
+              ]}
+              onPress={() => navigation.navigate('GestionUsuarios')}
+            >
+              <LinearGradient
+                colors={['#00bcd4', '#00838f']}
+                style={styles.buttonGradient}
+              >
+                <MaterialIcons name="supervisor-account" size={24} color="white" />
+                <Text style={styles.buttonText}>Gestión de Profesores y Admins</Text>
+              </LinearGradient>
+            </Pressable>
           </View>
         </Animated.View>
+
+        {loadingPromocion && (
+          <View style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center', zIndex: 10
+          }}>
+            <Text style={{ color: '#fff', fontSize: 18, marginBottom: 10 }}>Promocionando alumnos...</Text>
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>IPA School Projects Manager v1.0</Text>

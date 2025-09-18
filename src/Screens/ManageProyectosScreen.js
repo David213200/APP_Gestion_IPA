@@ -17,12 +17,15 @@ import { Picker } from '@react-native-picker/picker';
 import { database } from '../services/credentials';
 import { ref, get } from 'firebase/database';
 
-const ManageProyectosScreen = ({ navigation }) => {
+const ManageProyectosScreen = ({ navigation, route }) => {
+  const { user, role } = route.params || {};
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [nivelSeleccionado, setNivelSeleccionado] = useState('');
+  const [catalogoProyectos, setCatalogoProyectos] = useState([]);
+  const [catalogoLoading, setCatalogoLoading] = useState(true);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
@@ -33,13 +36,14 @@ const ManageProyectosScreen = ({ navigation }) => {
     }).start();
     
     fetchStudents();
+    fetchCatalogo();
   }, []);
 
   const fetchStudents = async () => {
     try {
       const niveles = ['proyectos_sanitizado_1r', 'proyectos_sanitizado_2n', 
                       'proyectos_sanitizado_3r', 'proyectos_sanitizado_4t'];
-      const allStudents = [];
+      let allStudents = [];
 
       for (const nivel of niveles) {
         const dbRef = ref(database, `proyectos/${nivel}`);
@@ -57,6 +61,14 @@ const ManageProyectosScreen = ({ navigation }) => {
           });
         }
       }
+      /*
+      // FILTRO: Si es profesor, solo alumnos con su nombre como tutor (robusto)
+      if (role === 'professor' && user?.nombre) {
+        const nombreProfesor = user.nombre.trim().toLowerCase();
+        allStudents = allStudents.filter(student =>
+          (student.tutor || '').trim().toLowerCase() === nombreProfesor
+        );
+      }*/
 
       setStudents(allStudents);
       setFilteredStudents(allStudents);
@@ -64,6 +76,25 @@ const ManageProyectosScreen = ({ navigation }) => {
       console.error("Error fetching students: ", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCatalogo = async () => {
+    try {
+      const refCat = ref(database, 'CatalogoProyectos');
+      const snap = await get(refCat);
+      if (snap.exists()) {
+        // Convierte a array de objetos {nombre, profesor}
+        const arr = Object.values(snap.val()).map(p => ({
+          nombre: p.nombre,
+          profesor: p.profesor
+        }));
+        setCatalogoProyectos(arr);
+      }
+    } catch (e) {
+      console.error("Error cargando catálogo:", e);
+    } finally {
+      setCatalogoLoading(false);
     }
   };
 
@@ -203,6 +234,8 @@ const ManageProyectosScreen = ({ navigation }) => {
             <Text style={styles.emptyText}>No se encontraron alumnos</Text>
           }
         />
+
+        
       </SafeAreaView>
     </LinearGradient>
   );
@@ -276,7 +309,7 @@ const styles = {
   },
   picker: {
     height: 50,
-    color: 'white',
+    color: 'black',
   },
   listContent: {
     paddingBottom: 20,

@@ -18,6 +18,7 @@ import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
 // Firebase imports
 import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -55,6 +56,12 @@ const GestionDB = ({ navigation }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [resultadoImportacion, setResultadoImportacion] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [correo, setCorreo] = useState('');
+  const [rol, setRol] = useState('Estudiante'); // Valor por defecto
+  const [password, setPassword] = useState('');
+
+  // Detecta si es web
+  const isWeb = Platform.OS === 'web';
 
   // Efecto para controlar el scroll con rueda en web
   useEffect(() => {
@@ -114,26 +121,57 @@ const GestionDB = ({ navigation }) => {
   };
 
   const agregarAlumno = async () => {
-    if (!nombre.trim() || !tutor.trim()) {
+    if (!nombre.trim() || !tutor.trim() || !correo.trim() || !rol.trim() || !password.trim()) {
       setErrorMessage("Complete todos los campos");
       return;
     }
 
     try {
+      // 1. Crear usuario en Auth con la contraseña introducida
+      const auth = getAuth();
+      await createUserWithEmailAndPassword(auth, correo, password);
+
+      // 2. Guardar en proyectos y usuarios (como ya tienes)
       const cursoPath = `proyectos/proyectos_sanitizado_${curso}`;
       const alumnosRef = ref(database, cursoPath);
       const snapshot = await get(alumnosRef);
       const totalAlumnos = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
       const nuevoId = `proyectos_sanitizado_${curso}_alumno_${totalAlumnos}`;
 
+      // 1. Guarda en proyectos
       await set(ref(database, `${cursoPath}/${nuevoId}`), {
         alumno: nombre,
+        correo: correo,
         nivel: curso,
         tutor: tutor,
+        rol: rol,
         proyectos: {}
       });
 
-      setSuccessMessage("¡Alumno agregado!");
+      // 2. Guarda en usuarios (usa el correo como clave, o puedes usar el UID si lo tienes)
+      const usuarioKey = correo.replace(/[@.]/g, '_');
+      const usuarioPath = getUsuarioPath(correo, rol);
+      await set(ref(database, usuarioPath), {
+        correo: correo,
+        nombre: nombre,
+        rol: rol
+      });
+
+      // Busca el UID del profesor por correo
+      const usuariosRef = ref(database, 'usuarios');
+      const usuariosSnap = await get(usuariosRef);
+      if (usuariosSnap.exists()) {
+        const usuariosData = usuariosSnap.val();
+        for (const [profUID, profData] of Object.entries(usuariosData)) {
+          if (profData.rol === "Profesor" && profData.correo === tutor) {
+            // Añade el alumno al listado de alumnos del profesor
+            await set(ref(database, `usuarios/${profUID}/alumnos/${nuevoId}`), true);
+            break;
+          }
+        }
+      }
+
+      setSuccessMessage("¡Alumno agregado y usuario creado en Auth!");
       resetForm();
       await cargarAlumnos(curso);
     } catch (error) {
@@ -151,7 +189,7 @@ const GestionDB = ({ navigation }) => {
 
     try {
       const path = `proyectos/proyectos_sanitizado_${alumnoSeleccionado.curso}/${alumnoSeleccionado.id}`;
-      await update(ref(database, path), { alumno: nombre, tutor: tutor });
+      await update(ref(database, path), { alumno: nombre, tutor: tutor, correo: correo, rol: rol });
       setSuccessMessage("¡Cambios guardados!");
       resetForm();
       await cargarAlumnos(curso);
@@ -169,6 +207,8 @@ const GestionDB = ({ navigation }) => {
         setAlumnoSeleccionado({ id: idAlumno, curso: cursoAlumno });
         setNombre(snapshot.val().alumno);
         setTutor(snapshot.val().tutor);
+        setCorreo(snapshot.val().correo);
+        setRol(snapshot.val().rol); // <--- añade esto
       }
     } catch (error) {
       setErrorMessage(`Error al cargar para editar: ${error.message}`);
@@ -200,22 +240,41 @@ const GestionDB = ({ navigation }) => {
   const resetForm = () => {
     setNombre('');
     setTutor('');
+    setCorreo('');
+    setRol('Estudiante'); // Reinicia a valor por defecto
     setAlumnoSeleccionado(null);
   };
 
   const pickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ type: 'text/*' });
-      if (result.canceled) return;
+    if (isWeb) {
+      // Usa input HTML para seleccionar archivo
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv';
+      input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = event => {
+          const csvString = event.target.result;
+          procesarCSV(csvString);
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    } else {
+      try {
+        const result = await DocumentPicker.getDocumentAsync({ type: 'text/*' });
+        if (result.canceled) return;
 
-      if (result.assets?.[0]) {
-        const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
-        const resultados = await procesarCSV(fileContent);
-        setResultadoImportacion(resultados);
-        setShowModal(true);
+        if (result.assets?.[0]) {
+          const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
+          const resultados = await procesarCSV(fileContent);
+          setResultadoImportacion(resultados);
+          setShowModal(true);
+        }
+      } catch (error) {
+        setErrorMessage(`Error seleccionando archivo: ${error.message}`);
       }
-    } catch (error) {
-      setErrorMessage(`Error seleccionando archivo: ${error.message}`);
     }
   };
 
@@ -225,24 +284,20 @@ const GestionDB = ({ navigation }) => {
 
     csvString.split('\n').forEach((linea, index) => {
       if (!linea.trim()) return;
-      
       resultados.total++;
       const partes = linea.split(';');
-      
-      if (partes.length < 3) {
+      if (partes.length < 6) {
         resultados.errores++;
         resultados.erroresDetalles.push(`Fila ${index + 1}: Campos incompletos`);
         return;
       }
-      
-      const [alumno, nivel, tutor] = partes;
-      if (!alumno || !nivel || !tutor || !['1r','2n','3r','4t'].includes(nivel)) {
+      const [alumno, correo, password, rol, nivel, tutor] = partes;
+      if (!alumno || !correo || !password || !rol || !nivel || !tutor || !['1r','2n','3r','4t'].includes(nivel)) {
         resultados.errores++;
         resultados.erroresDetalles.push(`Fila ${index + 1}: ${!['1r','2n','3r','4t'].includes(nivel) ? 'Curso inválido' : 'Campos incompletos'}`);
         return;
       }
-      
-      (alumnosPorCurso[nivel] = alumnosPorCurso[nivel] || []).push({ alumno, tutor });
+      (alumnosPorCurso[nivel] = alumnosPorCurso[nivel] || []).push({ alumno, correo, password, rol, tutor });
     });
 
     for (const [curso, alumnos] of Object.entries(alumnosPorCurso)) {
@@ -251,15 +306,33 @@ const GestionDB = ({ navigation }) => {
         const snapshot = await get(ref(database, `proyectos/proyectos_sanitizado_${curso}`));
         let contador = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
 
-        alumnos.forEach((alumno) => {
+        for (const alumno of alumnos) {
+          // Crear usuario en Auth con la contraseña del CSV
+          try {
+            const auth = getAuth();
+            await createUserWithEmailAndPassword(auth, alumno.correo, alumno.password);
+          } catch (e) {
+            // Si ya existe, puedes ignorar o registrar el error
+            resultados.errores++;
+            resultados.erroresDetalles.push(`Error creando usuario Auth para ${alumno.correo}: ${e.message}`);
+            continue;
+          }
           const nuevoId = `proyectos_sanitizado_${curso}_alumno_${contador++}`;
+          const usuarioKey = alumno.correo.replace(/[@.]/g, '_');
+          updates[`usuarios/${usuarioKey}`] = {
+            correo: alumno.correo,
+            nombre: alumno.alumno,
+            rol: alumno.rol
+          };
           updates[`proyectos/proyectos_sanitizado_${curso}/${nuevoId}`] = {
             alumno: alumno.alumno,
+            correo: alumno.correo,
             nivel: curso,
             tutor: alumno.tutor,
+            rol: alumno.rol,
             proyectos: {}
           };
-        });
+        }
 
         await update(ref(database), updates);
         resultados.exitos += alumnos.length;
@@ -272,6 +345,18 @@ const GestionDB = ({ navigation }) => {
     await cargarAlumnos(curso);
     return resultados;
   };
+
+  function getUsuarioPath(correo, rol) {
+    const usuarioKey = correo.replace(/[@.]/g, '_');
+    if (rol === "Profesor") {
+      return `usuarios/uidProfesor/alumnos/${usuarioKey}`;
+    }
+    if (rol === "Admin") {
+      return `usuarios/uidAdmin`;
+    }
+    // Por defecto, Estudiante
+    return `usuarios/${usuarioKey}`;
+  }
 
   return (
     <LinearGradient
@@ -356,6 +441,43 @@ const GestionDB = ({ navigation }) => {
             />
           </View>
 
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Correo:</Text>
+            <TextInput
+              style={styles.input}
+              value={correo}
+              onChangeText={setCorreo}
+              placeholder="Correo del alumno"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Contraseña:</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Contraseña"
+              secureTextEntry
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Rol:</Text>
+            <Picker
+              selectedValue={rol}
+              onValueChange={setRol}
+              style={styles.picker}
+            >
+              <Picker.Item label="Estudiante" value="Estudiante" />
+              <Picker.Item label="Profesor" value="Profesor" />
+              <Picker.Item label="Admin" value="Admin" />
+            </Picker>
+          </View>
+
           <View style={styles.buttonGroup}>
             {!alumnoSeleccionado ? (
               <TouchableOpacity style={styles.addButton} onPress={agregarAlumno}>
@@ -376,7 +498,7 @@ const GestionDB = ({ navigation }) => {
 
         <View style={styles.importCard}>
           <Text style={styles.sectionTitle}>Importar desde CSV</Text>
-          <Text style={styles.importInfo}>Formato esperado: nombre;curso;tutor</Text>
+          <Text style={styles.importInfo}>Formato esperado: nombre;correo;contraseña;rol;curso;tutor</Text>
           <TouchableOpacity style={styles.importButton} onPress={pickDocument}>
             <Text style={styles.buttonText}>Seleccionar Archivo CSV</Text>
           </TouchableOpacity>
@@ -387,31 +509,33 @@ const GestionDB = ({ navigation }) => {
           
           {loading ? (
             <ActivityIndicator size="large" color="#4CAF50" style={styles.loader} />
-          ) : alumnos.length > 0 ? (
-            alumnos.map((alumno) => (
-              <View key={alumno.id} style={styles.alumnoItem}>
-                <View style={styles.alumnoInfo}>
-                  <Text style={styles.alumnoName}>{alumno.alumno}</Text>
-                  <Text style={styles.alumnoTutor}>Tutor: {alumno.tutor}</Text>
-                </View>
-                <View style={styles.alumnoActions}>
-                  <TouchableOpacity 
-                    style={styles.editButton}
-                    onPress={() => editarAlumno(curso, alumno.id)}
-                  >
-                    <MaterialIcons name="edit" size={20} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.deleteButton}
-                    onPress={() => eliminarAlumno(curso, alumno.id)}
-                  >
-                    <MaterialIcons name="delete" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
           ) : (
-            <Text style={styles.noStudents}>No hay alumnos en este curso</Text>
+            alumnos.length > 0 ? (
+              alumnos.map((alumno) => (
+                <View key={alumno.id} style={styles.alumnoItem}>
+                  <View style={styles.alumnoInfo}>
+                    <Text style={styles.alumnoName}>{alumno.alumno}</Text>
+                    <Text style={styles.alumnoTutor}>Correo: {alumno.correo}</Text>
+                  </View>
+                  <View style={styles.alumnoActions}>
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={() => editarAlumno(curso, alumno.id)}
+                    >
+                      <MaterialIcons name="edit" size={20} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => eliminarAlumno(curso, alumno.id)}
+                    >
+                      <MaterialIcons name="delete" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noStudents}>No hay alumnos en este curso</Text>
+            )
           )}
         </View>
       </View>
@@ -435,7 +559,7 @@ const GestionDB = ({ navigation }) => {
                   
                   {resultadoImportacion.erroresDetalles.length > 0 && (
                     <View style={styles.erroresContainer}>
-                      <Text style={styles.erroresTitle}>Errores en filas:</Text>
+                      <Text style={styles.erroresTitle}>Errores in filas:</Text>
                       <ScrollView style={styles.erroresList}>
                         {resultadoImportacion.erroresDetalles.map((error, index) => (
                           <Text key={index} style={styles.errorDetail}>{error}</Text>
