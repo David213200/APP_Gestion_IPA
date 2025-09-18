@@ -68,7 +68,7 @@ const ProfessorScreen = ({ navigation, route }) => {
             }
           ]}
         >
-          Bienvenido, Profesor {name}
+          Benvingut, Professor {name}
         </Animated.Text>
 
         <Animated.View 
@@ -81,8 +81,8 @@ const ProfessorScreen = ({ navigation, route }) => {
           <View style={styles.container}>
             <View style={styles.content}>
               <Text style={styles.contentText}>
-                Aquí puedes gestionar tus estudiantes y proyectos académicos
-                con herramientas especializadas para docentes.
+                Aquí pots gestionar els teus estudiants i projectes acadèmics
+                amb eines especialitzades per a docents.
               </Text>
 
               <Pressable 
@@ -97,7 +97,7 @@ const ProfessorScreen = ({ navigation, route }) => {
                 style={styles.buttonGradient}
               >
                 <FontAwesome5 name="database" size={24} color="white" />
-                <Text style={styles.buttonText}>Explorar Proyectos</Text>
+                <Text style={styles.buttonText}>Explora Projectes</Text>
               </LinearGradient>
               </Pressable>
 
@@ -113,7 +113,7 @@ const ProfessorScreen = ({ navigation, route }) => {
                   style={styles.buttonGradient}
                 >
                   <FontAwesome5 name="plus-circle" size={24} color="white" />
-                  <Text style={styles.buttonText}>Añadir Proyectos</Text>
+                  <Text style={styles.buttonText}>Afegeix Projectes</Text>
                 </LinearGradient>
                 </Pressable>
             </View>

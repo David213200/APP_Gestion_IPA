@@ -30,7 +30,7 @@ export default function GestionProyectosScreen({ navigation }) {
   // Añadir o modificar proyecto
   const handleGuardar = async () => {
     if (!nombre || !profesor) {
-      Alert.alert('Error', 'Rellena nombre y profesor');
+      Alert.alert('Error', 'Omple el nom i el professor');
       return;
     }
     let id = editId;
@@ -41,7 +41,7 @@ export default function GestionProyectosScreen({ navigation }) {
       id = `proyecto_${nextNum}`;
     }
     await set(ref(db, `CatalogoProyectos/${id}`), { nombre, profesor });
-    Alert.alert('Éxito', editId ? 'Proyecto modificado' : 'Proyecto añadido');
+    Alert.alert('Èxit', editId ? 'Projecte modificat' : 'Projecte afegit');
     setNombre('');
     setProfesor('');
     setEditId(null);
@@ -58,7 +58,7 @@ export default function GestionProyectosScreen({ navigation }) {
   const handleEliminar = async (id) => {
     await remove(ref(db, `CatalogoProyectos/${id}`));
     setProyectos(proyectos.filter(p => p.id !== id));
-    Alert.alert('Eliminado', 'Proyecto eliminado');
+    Alert.alert('Eliminat', 'Projecte eliminat');
   };
 
   // Editar proyecto
@@ -70,32 +70,90 @@ export default function GestionProyectosScreen({ navigation }) {
 
   // Cargar CSV
   const handleCSV = async () => {
-    const result = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
-    if (result.type === 'success') {
-      Papa.parse(result.uri, {
-        download: true,
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
+      console.log("DocumentPicker result:", result);
+
+      let csvText = "";
+
+      // WEB: assets[0].uri es base64
+      if (result.assets && result.assets[0] && result.assets[0].uri.startsWith("data:text/csv;base64,")) {
+        const base64 = result.assets[0].uri.split(',')[1];
+        // Decodifica base64 a texto
+        csvText = atob(base64);
+        console.log("CSV text (web/base64):", csvText);
+      }
+      // MÓVIL: file:// o content://
+      else if (result.uri && (result.uri.startsWith("file://") || result.uri.startsWith("content://"))) {
+        try {
+          const { readAsStringAsync } = await import('expo-file-system');
+          csvText = await readAsStringAsync(result.uri, { encoding: 'utf8' });
+          console.log("CSV text (mobile):", csvText);
+        } catch (e) {
+          console.log("Error leyendo archivo con FileSystem:", e);
+          Alert.alert('Error', 'No s\'ha pogut llegir el fitxer CSV');
+          return;
+        }
+      } else {
+        // Fallback: intenta fetch (poco probable que funcione en web con base64)
+        try {
+          const response = await fetch(result.uri);
+          csvText = await response.text();
+          console.log("CSV text (fetch):", csvText);
+        } catch (e) {
+          console.log("Error leyendo archivo con fetch:", e);
+          Alert.alert('Error', 'No s\'ha pogut llegir el fitxer CSV');
+          return;
+        }
+      }
+
+      if (!csvText) {
+        Alert.alert('Error', 'No s\'ha pogut llegir el fitxer CSV');
+        return;
+      }
+
+      Papa.parse(csvText, {
         header: true,
+        delimiter: ";",
         complete: async (output) => {
+          console.log("Papa.parse output:", output);
+
           let maxNum = proyectos.map(p => parseInt(p.id.split('_')[1])).filter(n => !isNaN(n));
           maxNum = maxNum.length ? Math.max(...maxNum) : 0;
           let updates = {};
           output.data.forEach((row, idx) => {
-            if (row.nombre && row.profesor) {
+            const nombre = row["projecte"] || row["nombre proyecto"] || row["nom projecte"] || row.nombre;
+            const profesor = row["nom"] || row["nombre creador"] || row["nom creador"] || row.profesor;
+            console.log("Fila CSV:", row, "->", nombre, profesor);
+            if (nombre && profesor) {
               const id = `proyecto_${maxNum + idx + 1}`;
-              updates[id] = { nombre: row.nombre, profesor: row.profesor };
+              updates[id] = { nombre, profesor };
             }
           });
+          console.log("Updates a guardar:", updates);
+
+          if (Object.keys(updates).length === 0) {
+            Alert.alert('Error', 'El CSV no té dades vàlides.');
+            return;
+          }
           await update(ref(db, 'CatalogoProyectos'), updates);
-          Alert.alert('Éxito', 'Proyectos añadidos desde CSV');
-          // Refresca lista
+          Alert.alert('Èxit', 'Projectes afegits des de CSV');
+          // Refresca la lista de proyectos
           const snapshot = await get(ref(db, 'CatalogoProyectos'));
           if (snapshot.exists()) {
             const data = snapshot.val();
             const arr = Object.entries(data).map(([id, val]) => ({ id, ...val }));
             setProyectos(arr);
           }
+        },
+        error: (err) => {
+          console.log("Papa.parse error:", err);
+          Alert.alert('Error', 'No s\'ha pogut analitzar el CSV');
         }
       });
+    } catch (error) {
+      console.log("Error general en handleCSV:", error);
+      Alert.alert('Error', 'No s\'ha pogut carregar el CSV');
     }
   };
 
@@ -117,7 +175,8 @@ export default function GestionProyectosScreen({ navigation }) {
         >
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gestión de Proyectos</Text>
+        {/* Título de la pantalla */}
+        <Text style={styles.headerTitle}>Gestió de Projectes</Text>
         <Pressable 
           onPress={handleLogout}
           style={styles.logoutButton}
@@ -131,39 +190,45 @@ export default function GestionProyectosScreen({ navigation }) {
         {/* Cabecera y controles fijos arriba */}
         <TextInput
           style={styles.input}
-          placeholder="Nombre del proyecto"
+          placeholder="Nom del projecte"
           value={nombre}
           onChangeText={setNombre}
         />
         <TextInput
           style={styles.input}
-          placeholder="Profesor creador"
+          placeholder="Professor creador"
           value={profesor}
           onChangeText={setProfesor}
         />
-        <Button title={editId ? "Modificar proyecto" : "Añadir proyecto"} onPress={handleGuardar} />
+        {/* Botón añadir/modificar */}
+        <Button title={editId ? "Modifica projecte" : "Afegeix projecte"} onPress={handleGuardar} />
         <View style={styles.separator} />
-        <Button title="Cargar proyectos desde CSV" onPress={handleCSV} color="#1976D2" />
-        <Text style={styles.subtitle}>Proyectos existentes</Text>
+        {/* Botón cargar CSV */}
+        <Button title="Carrega projectes des de CSV" onPress={handleCSV} color="#1976D2" />
+        <Text style={styles.subtitle}>Projectes existents</Text>
 
         {/* SOLO la lista scrollea */}
         <View style={[styles.scrollContainer, { maxHeight: listaMaxHeight }]}>
           <ScrollView contentContainerStyle={styles.listContent}>
             {proyectos.length === 0 ? (
-              <Text style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>No hay proyectos</Text>
+              <Text style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>
+                No hi ha projectes
+              </Text>
             ) : (
-              proyectos.map(item => (
-                <View key={item.id} style={styles.proyectoItem}>
-                  <Text style={styles.proyectoText}>{item.nombre} ({item.profesor})</Text>
-                  <View style={{ flexDirection: 'row' }}>
-                    <Button title="Editar" onPress={() => handleEditar(item)} />
-                    <View style={{ width: 10 }} />
-                    <Button title="Eliminar" color="red" onPress={() => handleEliminar(item.id)} />
+              <>
+                {proyectos.map(item => (
+                  <View key={item.id} style={styles.proyectoItem}>
+                    <Text style={styles.proyectoText}>{item.nombre} ({item.profesor})</Text>
+                    <View style={{ flexDirection: 'row' }}>
+                      <Button title="Edita" onPress={() => handleEditar(item)} />
+                      <View style={{ width: 10 }} />
+                      <Button title="Elimina" color="red" onPress={() => handleEliminar(item.id)} />
+                    </View>
                   </View>
-                </View>
-              ))
+                ))}
+                <View style={{ height: 50 }} />
+              </>
             )}
-            <View style={{ height: 50 }} />
           </ScrollView>
         </View>
       </View>
@@ -205,7 +270,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#0f3057' },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, marginBottom: 10, backgroundColor: '#fff' },
   separator: { height: 20 },
-  subtitle: { fontSize: 18, fontWeight: 'bold', marginTop: 20, marginBottom: 10, color: '#00587a' },
+  subtitle: { fontSize: 18, fontWeight: 'bold', marginTop: 20, marginBottom: 10, color: '#ffffffff' },
   scrollContainer: {
     flex: 1,
     minHeight: 100,

@@ -28,13 +28,14 @@ const AdminScreen = ({ navigation, route }) => {
 
   const ejecutarPromocion = async () => {
     setLoadingPromocion(true);
+    console.log("Iniciando promoción de alumnos...");
     try {
       const db = getDatabase();
       const cursos = ['1r', '2n', '3r', '4t'];
       const ramas = cursos.map(c => `proyectos_sanitizado_${c}`);
       const añoActual = new Date().getFullYear();
 
-      // 1. Mueve los de 4t a egresados y elimina de 4t
+      // 1. Mueve los de 4t a egresados y elimina de 4t y usuarios
       const ref4t = ref(db, `proyectos/${ramas[3]}`);
       const snap4t = await get(ref4t);
       const alumnos4t = snap4t.exists() ? snap4t.val() : {};
@@ -43,19 +44,22 @@ const AdminScreen = ({ navigation, route }) => {
         const años = alumno.años ? [...alumno.años, añoActual] : [añoActual];
         const proyectosPorAño = alumno.proyectosPorAño || {};
         proyectosPorAño[añoActual] = alumno.proyectos || [];
-        await set(ref(db, `alumnos_egresados/${id}`), {
+        // Añade el año al nombre del nodo en egresados
+        const egresadoId = `${id}_${añoActual}`;
+        await set(ref(db, `alumnos_egresados/${egresadoId}`), {
           ...alumno,
           años,
           proyectosPorAño,
           fecha_egreso: new Date().toISOString().slice(0,10)
         });
+        // Elimina usuario de la rama usuarios
+        await remove(ref(db, `usuarios/${id}`));
       }
       await remove(ref4t);
 
       // 2. Mueve 3r->4t, 2n->3r, 1r->2n (y elimina de origen)
       for (let i = cursos.length - 2; i >= 0; i--) {
         const refActual = ref(db, `proyectos/${ramas[i]}`);
-        const refSiguiente = ref(db, `proyectos/${ramas[i+1]}`);
         const snap = await get(refActual);
         const alumnos = snap.exists() ? snap.val() : {};
 
@@ -63,14 +67,22 @@ const AdminScreen = ({ navigation, route }) => {
           const años = alumno.años ? [...alumno.años, añoActual] : [añoActual];
           const proyectosPorAño = alumno.proyectosPorAño || {};
           proyectosPorAño[añoActual] = alumno.proyectos || [];
-          await set(refSiguiente.child(id), { ...alumno, años, proyectosPorAño });
+          // Cambia el nombre del nodo al curso siguiente
+          const nuevoId = id.replace(ramas[i], ramas[i+1]);
+          await set(ref(db, `proyectos/${ramas[i+1]}/${nuevoId}`), {
+            ...alumno,
+            años,
+            proyectosPorAño,
+            nivel: cursos[i+1],
+            proyectos: {} // Limpia proyectos para el nuevo año
+          });
         }
         await remove(refActual);
       }
 
-      Alert.alert("Promoción completada", "Todos los alumnos han sido promocionados correctamente.");
+      Alert.alert("Promoció completada", "Tots els alumnes han estat promocionats correctament.");
     } catch (error) {
-      Alert.alert("Error", "No se pudo completar la promoción:\n" + error.message);
+      Alert.alert("Error", "No s'ha pogut completar la promoció:\n" + error.message);
     }
     setLoadingPromocion(false);
   };
@@ -111,7 +123,7 @@ const AdminScreen = ({ navigation, route }) => {
             }) }] }
           ]}
         >
-          Bienvenido, {userInfo.name}!
+          Benvingut, {userInfo.name}!
         </Animated.Text>
 
         <Animated.View 
@@ -135,7 +147,7 @@ const AdminScreen = ({ navigation, route }) => {
                 style={styles.buttonGradient}
               >
                 <FontAwesome5 name="database" size={24} color="white" />
-                <Text style={styles.buttonText}>Explorar Proyectos</Text>
+                <Text style={styles.buttonText}>Explorar Projectes</Text>
               </LinearGradient>
             </Pressable>
 
@@ -151,7 +163,7 @@ const AdminScreen = ({ navigation, route }) => {
                 style={styles.buttonGradient}
               >
                 <FontAwesome5 name="plus-circle" size={24} color="white" />
-                <Text style={styles.buttonText}>Edicion de Base de Datos</Text>
+                <Text style={styles.buttonText}>Edició de Base de Dades</Text>
               </LinearGradient>
             </Pressable>
 
@@ -167,7 +179,7 @@ const AdminScreen = ({ navigation, route }) => {
                 style={styles.buttonGradient}
               >
                 <FontAwesome5 name="tasks" size={24} color="white" />
-                <Text style={styles.buttonText}>Gestión de Proyectos</Text>
+                <Text style={styles.buttonText}>Gestió de Projectes</Text>
               </LinearGradient>
             </Pressable>
 
@@ -176,23 +188,14 @@ const AdminScreen = ({ navigation, route }) => {
                 styles.button,
                 { transform: [{ scale: pressed ? 0.95 : 1 }] }
               ]}
-              onPress={() => {
-                Alert.alert(
-                  "¿Estás seguro?",
-                  "Esta acción moverá a todos los alumnos al siguiente curso, y los de 4º pasarán a la base de datos de egresados. Esta operación no se puede deshacer. ¿Quieres continuar?",
-                  [
-                    { text: "Cancelar", style: "cancel" },
-                    { text: "Aceptar", style: "destructive", onPress: ejecutarPromocion }
-                  ]
-                );
-              }}
+              onPress={ejecutarPromocion}
             >
               <LinearGradient
                 colors={['#e53935', '#b71c1c']}
                 style={styles.buttonGradient}
               >
                 <FontAwesome5 name="arrow-up" size={24} color="white" />
-                <Text style={styles.buttonText}>Promocionar alumnos de curso</Text>
+                <Text style={styles.buttonText}>Promociona alumnes de curs</Text>
               </LinearGradient>
             </Pressable>
             <Pressable
@@ -207,7 +210,7 @@ const AdminScreen = ({ navigation, route }) => {
                 style={styles.buttonGradient}
               >
                 <FontAwesome5 name="user-graduate" size={24} color="white" />
-                <Text style={styles.buttonText}>Ver alumnos egresados</Text>
+                <Text style={styles.buttonText}>Veure alumnes egressats</Text>
               </LinearGradient>
             </Pressable>
             <Pressable 
@@ -222,7 +225,7 @@ const AdminScreen = ({ navigation, route }) => {
                 style={styles.buttonGradient}
               >
                 <MaterialIcons name="supervisor-account" size={24} color="white" />
-                <Text style={styles.buttonText}>Gestión de Profesores y Admins</Text>
+                <Text style={styles.buttonText}>Gestió de Professors i Admins</Text>
               </LinearGradient>
             </Pressable>
           </View>
@@ -233,7 +236,7 @@ const AdminScreen = ({ navigation, route }) => {
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center', zIndex: 10
           }}>
-            <Text style={{ color: '#fff', fontSize: 18, marginBottom: 10 }}>Promocionando alumnos...</Text>
+            <Text style={{ color: '#fff', fontSize: 18, marginBottom: 10 }}>Promocionant alumnes...</Text>
             <ActivityIndicator size="large" color="#fff" />
           </View>
         )}

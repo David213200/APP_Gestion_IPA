@@ -73,12 +73,12 @@ const EditProyectosScreen = ({ navigation, route }) => {
 
   const addNewProject = () => {
     if (!newProjectName.trim()) {
-      Alert.alert('Error', 'El nombre del proyecto es requerido');
+      Alert.alert('Error', "El nom del projecte és obligatori");
       return;
     }
     
     if (projects.some(p => p.nombre === newProjectName)) {
-      Alert.alert('Error', 'Ya existe un proyecto con ese nombre');
+      Alert.alert('Error', "Ja existeix un projecte amb aquest nom");
       return;
     }
 
@@ -94,13 +94,13 @@ const EditProyectosScreen = ({ navigation, route }) => {
 
   const validateFields = () => {
     if (projects.length === 0) {
-      Alert.alert('Error', 'Debe existir al menos un proyecto');
+      Alert.alert('Error', "Ha d'existir almenys un projecte");
       return false;
     }
     
     for (const project of projects) {
       if (!project.nombre.trim()) {
-        Alert.alert('Error', 'Todos los proyectos deben tener un nombre');
+        Alert.alert('Error', "Tots els projectes han de tenir un nom");
         return false;
       }
     }
@@ -127,11 +127,11 @@ const EditProyectosScreen = ({ navigation, route }) => {
       const studentRef = ref(database, `proyectos/${nivelPath}/${student.id}/proyectos`);
       await update(studentRef, proyectosData);
       
-      Alert.alert('Éxito', 'Datos guardados correctamente');
+      Alert.alert('Èxit', 'Dades desades correctament');
       navigation.goBack();
     } catch (error) {
       console.error("Error saving proyectos: ", error);
-      Alert.alert('Error', 'No se pudo guardar los datos');
+      Alert.alert('Error', "No s'han pogut desar les dades");
     } finally {
       setLoading(false);
     }
@@ -143,12 +143,12 @@ const EditProyectosScreen = ({ navigation, route }) => {
         <SafeAreaView style={styles.container} edges={['top']}>
 
             <View style={{ padding: 20, flex: 1, overflowY: 'auto', overflowX: 'hidden', maxHeight: '80vh'}}>
-              <Text style={styles.title}>Editar Proyectos - {student.alumno}</Text>
+              <Text style={styles.title}>Editar Projectes - {student.alumno}</Text>
     
               {projects.map((project, index) => (
                 <View key={index} style={styles.projectCard}>
                   <View style={styles.projectHeader}>
-                    <Text style={styles.projectNumber}>Proyecto {index + 1}</Text>
+                    <Text style={styles.projectNumber}>Projecte {index + 1}</Text>
                     <Pressable onPress={() => removeProject(index)}>
                       <Feather name="trash-2" size={20} color="#e74c3c" />
                     </Pressable>
@@ -173,7 +173,7 @@ const EditProyectosScreen = ({ navigation, route }) => {
                     </Text>
                   ) : null}
     
-                  <Text style={styles.label}>Estado</Text>
+                  <Text style={styles.label}>Estat</Text>
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={project.estado}
@@ -191,7 +191,7 @@ const EditProyectosScreen = ({ navigation, route }) => {
               ))}
     
               <View style={styles.newProjectContainer}>
-                <Text style={styles.sectionTitle}>Añadir Nuevo Proyecto</Text>
+                <Text style={styles.sectionTitle}>Afegir Nou Projecte</Text>
     
                 <Text style={styles.label}>Nom del Projecte</Text>
                 <View style={styles.pickerContainer}>
@@ -212,7 +212,7 @@ const EditProyectosScreen = ({ navigation, route }) => {
                   </Text>
                 ) : null}
     
-                <Text style={styles.label}>Estado Inicial</Text>
+                <Text style={styles.label}>Estat Inicial</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={newProjectStatus}
@@ -221,6 +221,7 @@ const EditProyectosScreen = ({ navigation, route }) => {
                   >
                     <Picker.Item label="Assignada" value="Assignada" />
                     <Picker.Item label="En curs" value="En curs" />
+
                   </Picker>
                 </View>
     

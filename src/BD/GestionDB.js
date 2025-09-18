@@ -217,8 +217,8 @@ const GestionDB = ({ navigation }) => {
 
   const eliminarAlumno = async (cursoAlumno, idAlumno) => {
     Alert.alert(
-      "Confirmar eliminación",
-      "¿Eliminar este alumno permanentemente?",
+      "Confirmar eliminació",
+      "¿Eliminar aquest alumne permanentement?",
       [
         { text: "Cancelar", style: "cancel" },
         { 
@@ -227,7 +227,7 @@ const GestionDB = ({ navigation }) => {
             try {
               await remove(ref(database, `proyectos/proyectos_sanitizado_${cursoAlumno}/${idAlumno}`));
               await cargarAlumnos(curso);
-              setSuccessMessage("Alumno eliminado");
+              setSuccessMessage("Alumno eliminat");
             } catch (error) {
               setErrorMessage(`Error al eliminar: ${error.message}`);
             }
@@ -404,7 +404,7 @@ const GestionDB = ({ navigation }) => {
         )}
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Curso:</Text>
+          <Text style={styles.label}>Curs:</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={curso}
@@ -422,12 +422,12 @@ const GestionDB = ({ navigation }) => {
 
         <View style={styles.card}>
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Nombre:</Text>
+            <Text style={styles.label}>Nom:</Text>
             <TextInput
               style={styles.input}
               value={nombre}
               onChangeText={setNombre}
-              placeholder="Nombre del alumno"
+              placeholder="Nom de l'alumne"
             />
           </View>
 
@@ -437,7 +437,7 @@ const GestionDB = ({ navigation }) => {
               style={styles.input}
               value={tutor}
               onChangeText={setTutor}
-              placeholder="Nombre del tutor"
+              placeholder="Nom del tutor"
             />
           </View>
 
@@ -447,19 +447,19 @@ const GestionDB = ({ navigation }) => {
               style={styles.input}
               value={correo}
               onChangeText={setCorreo}
-              placeholder="Correo del alumno"
+              placeholder="Correu de l'alumne"
               keyboardType="email-address"
               autoCapitalize="none"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Contraseña:</Text>
+            <Text style={styles.label}>Contrasenya:</Text>
             <TextInput
               style={styles.input}
               value={password}
               onChangeText={setPassword}
-              placeholder="Contraseña"
+              placeholder="Contrasenya"
               secureTextEntry
               autoCapitalize="none"
             />
@@ -472,24 +472,22 @@ const GestionDB = ({ navigation }) => {
               onValueChange={setRol}
               style={styles.picker}
             >
-              <Picker.Item label="Estudiante" value="Estudiante" />
-              <Picker.Item label="Profesor" value="Profesor" />
-              <Picker.Item label="Admin" value="Admin" />
+              <Picker.Item label="Estudiant" value="Estudiante" />
             </Picker>
           </View>
 
           <View style={styles.buttonGroup}>
             {!alumnoSeleccionado ? (
               <TouchableOpacity style={styles.addButton} onPress={agregarAlumno}>
-                <Text style={styles.buttonText}>Agregar Alumno</Text>
+                <Text style={styles.buttonText}>Afegeix Alumne</Text>
               </TouchableOpacity>
             ) : (
               <>
                 <TouchableOpacity style={styles.updateButton} onPress={actualizarAlumno}>
-                  <Text style={styles.buttonText}>Guardar Cambios</Text>
+                  <Text style={styles.buttonText}>Desa Canvis</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelButton} onPress={resetForm}>
-                  <Text style={styles.buttonText}>Cancelar</Text>
+                  <Text style={styles.buttonText}>Cancel·la</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -497,15 +495,15 @@ const GestionDB = ({ navigation }) => {
         </View>
 
         <View style={styles.importCard}>
-          <Text style={styles.sectionTitle}>Importar desde CSV</Text>
-          <Text style={styles.importInfo}>Formato esperado: nombre;correo;contraseña;rol;curso;tutor</Text>
+          <Text style={styles.sectionTitle}>Importa des de CSV</Text>
+          <Text style={styles.importInfo}>Format esperat: nom;correu;contrasenya;rol;curs;tutor</Text>
           <TouchableOpacity style={styles.importButton} onPress={pickDocument}>
-            <Text style={styles.buttonText}>Seleccionar Archivo CSV</Text>
+            <Text style={styles.buttonText}>Selecciona Arxiu CSV</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.studentsCard}>
-          <Text style={styles.sectionTitle}>Lista de Alumnos</Text>
+          <Text style={styles.sectionTitle}>Llista d'Alumnes</Text>
           
           {loading ? (
             <ActivityIndicator size="large" color="#4CAF50" style={styles.loader} />
@@ -515,7 +513,7 @@ const GestionDB = ({ navigation }) => {
                 <View key={alumno.id} style={styles.alumnoItem}>
                   <View style={styles.alumnoInfo}>
                     <Text style={styles.alumnoName}>{alumno.alumno}</Text>
-                    <Text style={styles.alumnoTutor}>Correo: {alumno.correo}</Text>
+                    <Text style={styles.alumnoTutor}>Correu: {alumno.correo}</Text>
                   </View>
                   <View style={styles.alumnoActions}>
                     <TouchableOpacity 
@@ -534,7 +532,7 @@ const GestionDB = ({ navigation }) => {
                 </View>
               ))
             ) : (
-              <Text style={styles.noStudents}>No hay alumnos en este curso</Text>
+              <Text style={styles.noStudents}>No hi ha alumnes en aquest curs</Text>
             )
           )}
         </View>
@@ -549,17 +547,17 @@ const GestionDB = ({ navigation }) => {
         <TouchableWithoutFeedback onPress={() => setShowModal(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalView}>
-              <Text style={styles.modalTitle}>Resultado de la importación</Text>
+              <Text style={styles.modalTitle}>Resultat de la importació</Text>
               
               {resultadoImportacion && (
                 <View style={styles.resultContainer}>
-                  <Text style={styles.resultText}>Total procesado: {resultadoImportacion.total}</Text>
-                  <Text style={styles.resultText}>Éxitos: {resultadoImportacion.exitos}</Text>
-                  <Text style={styles.resultText}>Errores: {resultadoImportacion.errores}</Text>
+                  <Text style={styles.resultText}>Total processat: {resultadoImportacion.total}</Text>
+                  <Text style={styles.resultText}>Èxits: {resultadoImportacion.exitos}</Text>
+                  <Text style={styles.resultText}>Errors: {resultadoImportacion.errores}</Text>
                   
                   {resultadoImportacion.erroresDetalles.length > 0 && (
                     <View style={styles.erroresContainer}>
-                      <Text style={styles.erroresTitle}>Errores in filas:</Text>
+                      <Text style={styles.erroresTitle}>Errors a les files:</Text>
                       <ScrollView style={styles.erroresList}>
                         {resultadoImportacion.erroresDetalles.map((error, index) => (
                           <Text key={index} style={styles.errorDetail}>{error}</Text>
@@ -574,7 +572,7 @@ const GestionDB = ({ navigation }) => {
                 style={styles.closeButton}
                 onPress={() => setShowModal(false)}
               >
-                <Text style={styles.closeButtonText}>Cerrar</Text>
+                <Text style={styles.closeButtonText}>Tanca</Text>
               </TouchableOpacity>
             </View>
           </View>

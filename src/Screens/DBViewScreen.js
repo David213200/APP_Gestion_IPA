@@ -116,7 +116,7 @@ return (
         >
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Visualización Base de Datos</Text>
+        <Text style={styles.headerTitle}>Visualització Base de Dades</Text>
         <Pressable 
           onPress={() => navigation.navigate("Home")}
           style={styles.logoutButton}
@@ -131,7 +131,7 @@ return (
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar alumno..."
+          placeholder="Cerca alumne..."
           value={search}
           onChangeText={handleSearch}
         />
@@ -145,11 +145,11 @@ return (
               handleSearch(search);
             }}
           >
-            <Picker.Item label="Todos los cursos" value="" />
-            <Picker.Item label="1r ESO" value="1r" />
-            <Picker.Item label="2n ESO" value="2n" />
-            <Picker.Item label="3r ESO" value="3r" />
-            <Picker.Item label="4t ESO" value="4t" />
+            <Picker.Item label="Tots els cursos" value="" color="#000" />
+            <Picker.Item label="1r ESO" value="1r" color="#000" />
+            <Picker.Item label="2n ESO" value="2n" color="#000" />
+            <Picker.Item label="3r ESO" value="3r" color="#000" />
+            <Picker.Item label="4t ESO" value="4t" color="#000" />
           </Picker>
         </View>
       </View>
@@ -159,11 +159,11 @@ return (
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#0000ff" />
-            <Text style={styles.loadingText}>Cargando datos...</Text>
+            <Text style={styles.loadingText}>Carregant dades...</Text>
           </View>
         ) : filteredLista.length === 0 ? (
           <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>No se encontraron resultados</Text>
+            <Text style={styles.noResultsText}>No s'han trobat resultats</Text>
           </View>
         ) : isWeb ? (
           <View style={styles.webContent}>
@@ -182,7 +182,7 @@ return (
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Gestión de Proyectos v1.0</Text>
+        <Text style={styles.footerText}>Gestió de Projectes v1.0</Text>
       </View>
     </SafeAreaView>
   </LinearGradient>

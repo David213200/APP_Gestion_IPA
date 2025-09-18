@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Pressable, Modal, Platform, Dimensions } from 'react-native';
 import { getDatabase, ref, get } from 'firebase/database';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
+const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
+
 export default function EgresadosScreen({ navigation }) {
   const [egresados, setEgresados] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [proyectosModal, setProyectosModal] = useState([]);
+  const [añoModal, setAñoModal] = useState('');
 
   useEffect(() => {
     const fetchEgresados = async () => {
@@ -25,10 +31,36 @@ export default function EgresadosScreen({ navigation }) {
     fetchEgresados();
   }, []);
 
-  // Botón de logout
+  const handleShowProyectos = (año, proyectos) => {
+    setAñoModal(año);
+    setProyectosModal(proyectos);
+    setModalVisible(true);
+  };
+
   const handleLogout = () => {
     navigation.navigate('Home');
   };
+
+  const renderEgresadoCard = (alumno) => (
+    <View key={alumno.id} style={styles.card}>
+      <Text style={styles.nombre}>{alumno.alumno || alumno.nombre}</Text>
+      <Text style={styles.info}>Correu: {alumno.correo}</Text>
+      <Text style={styles.info}>Tutor: {alumno.tutor}</Text>
+      <Text style={styles.info}>Anys a l'escola: {Array.isArray(alumno.años) ? alumno.años.join(', ') : '-'}</Text>
+      <Text style={styles.info}>Data d'egressat: {alumno.fecha_egreso || '-'}</Text>
+      <Text style={styles.proyectosTitle}>Projectes per any:</Text>
+      {alumno.proyectosPorAño && typeof alumno.proyectosPorAño === 'object'
+        ? Object.entries(alumno.proyectosPorAño).map(([año, proyectos]) => (
+            <Pressable key={año} onPress={() => handleShowProyectos(año, proyectos)}>
+              <Text style={[styles.año, { textDecorationLine: 'underline', color: '#1976D2', marginBottom: 4 }]}>
+                {año} (veure projectes)
+              </Text>
+            </Pressable>
+          ))
+        : <Text style={styles.proyecto}>Sense projectes</Text>
+      }
+    </View>
+  );
 
   return (
     <LinearGradient colors={['#0f3057', '#00587a', '#008891']} style={{ flex: 1 }}>
@@ -39,7 +71,8 @@ export default function EgresadosScreen({ navigation }) {
         >
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Alumnos Egresados</Text>
+        {/* Título de la pantalla */}
+        <Text style={styles.headerTitle}>Alumnes Egressats</Text>
         <Pressable 
           onPress={handleLogout}
           style={styles.logoutButton}
@@ -49,38 +82,62 @@ export default function EgresadosScreen({ navigation }) {
           </LinearGradient>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.container}>
+
+      <View style={isWeb ? styles.webContent : styles.scrollContainer}>
         {loading ? (
-          <ActivityIndicator size="large" color="#1976D2" />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1976D2" />
+          </View>
         ) : egresados.length === 0 ? (
-          <Text style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>No hay egresados</Text>
+          <View style={styles.noResultsContainer}>
+            <Text style={styles.noResultsText}>No hi ha egressats</Text>
+          </View>
+        ) : isWeb ? (
+          egresados.map(alumno => renderEgresadoCard(alumno))
         ) : (
-          egresados.map(alumno => (
-            <View key={alumno.id} style={styles.card}>
-              <Text style={styles.nombre}>{alumno.alumno || alumno.nombre}</Text>
-              <Text style={styles.info}>Correo: {alumno.correo}</Text>
-              <Text style={styles.info}>Tutor: {alumno.tutor}</Text>
-              <Text style={styles.info}>Años en la escuela: {alumno.años ? alumno.años.join(', ') : '-'}</Text>
-              <Text style={styles.info}>Fecha de egreso: {alumno.fecha_egreso || '-'}</Text>
-              <Text style={styles.proyectosTitle}>Proyectos por año:</Text>
-              {alumno.proyectosPorAño
-                ? Object.entries(alumno.proyectosPorAño).map(([año, proyectos]) => (
-                    <View key={año} style={styles.proyectosPorAño}>
-                      <Text style={styles.año}>{año}:</Text>
-                      {proyectos.length > 0
-                        ? proyectos.map((p, idx) => (
-                            <Text key={idx} style={styles.proyecto}>{p}</Text>
-                          ))
-                        : <Text style={styles.proyecto}>Sin proyectos</Text>}
-                    </View>
-                  ))
-                : <Text style={styles.proyecto}>Sin proyectos</Text>
-              }
-            </View>
-          ))
+          <ScrollView contentContainerStyle={styles.mobileContent} showsVerticalScrollIndicator={true}>
+            {egresados.map(alumno => renderEgresadoCard(alumno))}
+            <View style={{ height: 50 }} />
+          </ScrollView>
         )}
-        <View style={{ height: 50 }} />
-      </ScrollView>
+      </View>
+
+      {/* Modal para mostrar proyectos */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>
+              Projectes de {añoModal}
+            </Text>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {Array.isArray(proyectosModal) && proyectosModal.length > 0 ? (
+                proyectosModal.map((p, idx) => (
+                  <Text key={idx} style={{ marginBottom: 6 }}>{p}</Text>
+                ))
+              ) : proyectosModal && typeof proyectosModal === 'object' && Object.keys(proyectosModal).length > 0 ? (
+                Object.entries(proyectosModal).map(([nombre, valor], idx) => (
+                  <Text key={idx} style={{ marginBottom: 6 }}>
+                    <Text style={{ fontWeight: 'bold' }}>{nombre}:</Text> {valor}
+                  </Text>
+                ))
+              ) : (
+                <Text>No hi ha projectes aquest any.</Text>
+              )}
+            </ScrollView>
+            <Pressable
+              style={{ marginTop: 16, alignSelf: 'center', backgroundColor: '#1976D2', borderRadius: 8, padding: 10 }}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Tancar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -117,11 +174,75 @@ const styles = StyleSheet.create({
   },
   container: { padding: 20, backgroundColor: 'transparent' },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  card: { backgroundColor: '#f5f5f5', borderRadius: 10, padding: 16, marginBottom: 18 },
+  card: {
+    width: isWeb ? (width > 900 ? '31%' : width > 600 ? '48%' : '100%') : '100%',
+    minHeight: 220,
+    maxWidth: 440,
+    marginBottom: 24,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.90)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(52,152,219,0.10)',
+    justifyContent: 'flex-start',
+    overflow: 'hidden',
+  },
   nombre: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
   info: { fontSize: 14, color: '#333', marginBottom: 2 },
   proyectosTitle: { fontWeight: 'bold', marginTop: 8, marginBottom: 2 },
   proyectosPorAño: { marginLeft: 10, marginBottom: 2 },
   año: { fontWeight: 'bold', color: '#1976D2' },
   proyecto: { fontSize: 13, marginLeft: 10, color: '#444' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    maxHeight: '70%',
+    elevation: 5
+  },
+  webContent: {
+    padding: 20,
+    flex: 1,
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    maxHeight: '80vh',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    gap: 24,
+  },
+  scrollContainer: {
+    backgroundColor: 'transparent',
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noResultsText: {
+    color: '#888',
+    fontSize: 16,
+  },
+  mobileContent: {
+    padding: 14,
+  },
 });

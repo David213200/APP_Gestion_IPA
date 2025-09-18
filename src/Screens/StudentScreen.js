@@ -64,27 +64,27 @@ const StudentScreen = ({ route, navigation }) => {
   return (
     <LinearGradient colors={['#2C3E50', '#3498DB', '#2980B9']} style={{ flex: 1 }}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Informacion Alumno</Text>
+        <Text style={styles.headerTitle}>Informació de l'alumne</Text>
         
         <TouchableOpacity 
           onPress={() => navigation.navigate("Home")}
           style={styles.logoutButton}
         >
-          <Text>Salir</Text>
+          <Text>Surt</Text>
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>
-          Bienvenido {user.nombre}, estos son tus proyectos:
+          Benvingut/da {user.nombre}, aquests són els teus projectes:
         </Text>
 
         {proyectos.length === 0 ? (
-          <Text style={styles.noProyectos}>No tienes proyectos asignados.</Text>
+          <Text style={styles.noProyectos}>No tens projectes assignats.</Text>
         ) : (
           <View style={styles.card}>
             <Text style={styles.nombre}>{proyectos[0].alumno}</Text>
             <Text style={styles.tutor}>Tutor: {proyectos[0].tutor}</Text>
-            <Text style={styles.nivel}>Nivel: {proyectos[0].nivel}</Text>
+            <Text style={styles.nivel}>Nivell: {proyectos[0].nivel}</Text>
 
             {/* Totales */}
             {totales.length > 0 && (

@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, Pressable, Platform, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getDatabase, ref, set, get, remove } from 'firebase/database';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import * as DocumentPicker from 'expo-document-picker';
+import Papa from 'papaparse';
+
+const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
 
 const GestionUsuariosScreen = ({ navigation }) => {
   const [nombre, setNombre] = useState('');
@@ -32,16 +37,19 @@ const GestionUsuariosScreen = ({ navigation }) => {
       const snapshot = await get(usuariosRef);
       if (snapshot.exists()) {
         const data = snapshot.val();
-        // Solo profesores y admins
+        // SOLO profesores y admins, robusto
         const lista = Object.entries(data)
-          .filter(([_, v]) => v.rol === 'Profesor' || v.rol === 'Admin')
+          .filter(([_, v]) => {
+            const rol = String(v.rol || '').trim().toLowerCase();
+            return rol === 'admin' || rol === 'profesor';
+          })
           .map(([k, v]) => ({ id: k, ...v }));
         setUsuarios(lista);
       } else {
         setUsuarios([]);
       }
     } catch (e) {
-      setErrorMessage('Error cargando usuarios');
+      setErrorMessage('Error carregant usuaris');
     }
   };
 
@@ -55,7 +63,7 @@ const GestionUsuariosScreen = ({ navigation }) => {
 
   const agregarUsuario = async () => {
     if (!nombre.trim() || !correo.trim() || !password.trim() || !rol.trim()) {
-      setErrorMessage('Completa todos los campos');
+      setErrorMessage('Completa tots els camps');
       return;
     }
     try {
@@ -66,7 +74,7 @@ const GestionUsuariosScreen = ({ navigation }) => {
         correo,
         rol
       });
-      setSuccessMessage('¡Usuario creado!');
+      setSuccessMessage('Usuari creat!');
       resetForm();
       cargarUsuarios();
     } catch (e) {
@@ -83,7 +91,7 @@ const GestionUsuariosScreen = ({ navigation }) => {
 
   const actualizarUsuario = async () => {
     if (!nombre.trim() || !rol.trim()) {
-      setErrorMessage('Completa todos los campos');
+      setErrorMessage('Completa tots els camps');
       return;
     }
     try {
@@ -93,7 +101,7 @@ const GestionUsuariosScreen = ({ navigation }) => {
         correo: usuarioSeleccionado.correo,
         rol
       });
-      setSuccessMessage('Usuario actualizado');
+      setSuccessMessage('Usuari actualitzat');
       resetForm();
       cargarUsuarios();
     } catch (e) {
@@ -115,7 +123,7 @@ const GestionUsuariosScreen = ({ navigation }) => {
               const deleteUser = httpsCallable(functions, 'deleteUserByEmail');
               const result = await deleteUser({ email: usuario.correo });
               if (result.data.success) {
-                setSuccessMessage('Usuario eliminado');
+                setSuccessMessage('Usuari eliminat');
                 resetForm();
                 cargarUsuarios();
               } else {
@@ -135,12 +143,129 @@ const GestionUsuariosScreen = ({ navigation }) => {
       await signOut(auth);
       navigation.navigate('Home');
     } catch (e) {
-      setErrorMessage('Error al salir: ' + e.message);
+      setErrorMessage('Error al sortir: ' + e.message);
     }
   };
 
+  const handleImportCSV = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
+      console.log("DocumentPicker result:", result);
+
+      if (result.canceled) {
+        console.log("Importación cancelada por el usuario.");
+        return;
+      }
+
+      let csvText = "";
+
+      // Web: base64
+      if (result.assets && result.assets[0] && result.assets[0].uri.startsWith("data:text/csv;base64,")) {
+        const base64 = result.assets[0].uri.split(',')[1];
+        csvText = atob(base64);
+        console.log("CSV text (web/base64):", csvText);
+      }
+      // Móvil: file:// o content://
+      else if (result.uri && (result.uri.startsWith("file://") || result.uri.startsWith("content://"))) {
+        try {
+          const { readAsStringAsync } = await import('expo-file-system');
+          csvText = await readAsStringAsync(result.uri, { encoding: 'utf8' });
+          console.log("CSV text (mobile):", csvText);
+        } catch (e) {
+          console.log("Error leyendo archivo con FileSystem:", e);
+          Alert.alert('Error', 'No s\'ha pogut llegir el fitxer CSV');
+          return;
+        }
+      } else {
+        // Fallback: intenta fetch
+        try {
+          const response = await fetch(result.uri);
+          csvText = await response.text();
+          console.log("CSV text (fetch):", csvText);
+        } catch (e) {
+          console.log("Error leyendo archivo con fetch:", e);
+          Alert.alert('Error', 'No s\'ha pogut llegir el fitxer CSV');
+          return;
+        }
+      }
+
+      if (!csvText) {
+        Alert.alert('Error', 'No s\'ha pogut llegir el fitxer CSV');
+        return;
+      }
+
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (output) => {
+          console.log("Papa.parse output:", output);
+
+          let successCount = 0;
+          let failCount = 0;
+          let errores = [];
+
+          for (const row of output.data) {
+            const nombre = row.nombre?.trim();
+            const correo = row.correo?.trim().toLowerCase();
+            const password = row.password?.trim();
+            const rol = row.rol?.trim();
+            if (!nombre || !correo || !password || !rol) {
+              failCount++;
+              errores.push(`Faltan datos en la fila: ${JSON.stringify(row)}`);
+              continue;
+            }
+            try {
+              await createUserWithEmailAndPassword(auth, correo, password);
+              const usuarioKey = correo.replace(/[@.]/g, '_');
+              await set(ref(db, `usuarios/${usuarioKey}`), {
+                nombre,
+                correo,
+                rol
+              });
+              successCount++;
+              console.log(`Usuario creado: ${correo}`);
+            } catch (e) {
+              failCount++;
+              errores.push(`Error con ${correo}: ${e.message}`);
+              console.log(`Error creando usuario ${correo}:`, e.message);
+            }
+          }
+          // Mensaje resumen
+          const resumen = `Correctes: ${successCount}\nErrors: ${failCount}\n${errores.join('\n')}`;
+          Alert.alert('Importació finalitzada', resumen);
+          console.log(resumen);
+          cargarUsuarios();
+        },
+        error: (err) => {
+          Alert.alert('Error', 'No s\'ha pogut analitzar el CSV');
+          console.log("Papa.parse error:", err);
+        }
+      });
+    } catch (error) {
+      Alert.alert('Error', 'No s\'ha pogut importar el CSV');
+      console.log("Error general en handleImportCSV:", error);
+    }
+  };
+
+  const renderUsuarioCard = (usuario) => (
+    <View key={usuario.id} style={styles.usuarioCard}>
+      <Text style={styles.usuarioNombre}>{usuario.nombre}</Text>
+      <Text style={styles.usuarioCorreo}>{usuario.correo}</Text>
+      <Text style={styles.usuarioRol}>{usuario.rol}</Text>
+      <View style={{ flexDirection: 'row', marginTop: 10 }}>
+        <TouchableOpacity style={styles.editButton} onPress={() => seleccionarUsuario(usuario)}>
+          <Feather name="edit-2" size={18} color="#1976D2" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={() => eliminarUsuario(usuario)}>
+          <Feather name="trash-2" size={18} color="#e53935" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
-    <LinearGradient colors={['#0f3057', '#00587a', '#008891']} style={{ flex: 1 }}>
+  <LinearGradient colors={['#0f3057', '#00587a', '#008891']} style={{ flex: 1 }}>
+    <View style={{ flex: 1, minHeight: 0 }}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -159,7 +284,7 @@ const GestionUsuariosScreen = ({ navigation }) => {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.scrollContent}>
         {successMessage ? <Text style={styles.success}>{successMessage}</Text> : null}
         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
 
@@ -217,178 +342,212 @@ const GestionUsuariosScreen = ({ navigation }) => {
           )}
         </View>
 
+        <TouchableOpacity style={styles.addButton} onPress={handleImportCSV}>
+          <Text style={styles.buttonText}>Importa usuaris des de CSV</Text>
+        </TouchableOpacity>
+
         <Text style={styles.subtitle}>Llista de Professors i Administradors</Text>
-        {usuarios.map((usuario) => (
-          <View key={usuario.id} style={styles.usuarioItem}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.usuarioNombre}>{usuario.nombre}</Text>
-              <Text style={styles.usuarioCorreo}>{usuario.correo}</Text>
-              <Text style={styles.usuarioRol}>{usuario.rol}</Text>
+        {/* BLOQUE DE USUARIOS */}
+        <View style={{ flex: 1, minHeight: 0 }}>
+          {isWeb ? (
+            <View style={styles.webContent}>
+              {usuarios.length === 0 ? (
+                <Text style={styles.noResultsText}>No s'han trobat usuaris</Text>
+              ) : (
+                usuarios.map((usuario) => renderUsuarioCard(usuario))
+              )}
             </View>
-            <TouchableOpacity style={styles.editButton} onPress={() => seleccionarUsuario(usuario)}>
-              <Feather name="edit-2" size={18} color="#1976D2" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteButton} onPress={() => eliminarUsuario(usuario)}>
-              <Feather name="trash-2" size={18} color="#e53935" />
-            </TouchableOpacity>
-          </View>
-        ))}
-        <View style={{ height: 50 }} />
-      </ScrollView>
-    </LinearGradient>
-  );
+          ) : (
+            <ScrollView contentContainerStyle={styles.mobileContent} showsVerticalScrollIndicator={true}>
+              {usuarios.length === 0 ? (
+                <Text style={styles.noResultsText}>No s'han trobat usuaris</Text>
+              ) : (
+                usuarios.map((usuario) => renderUsuarioCard(usuario))
+              )}
+              <View style={{ height: 50 }} />
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </View>
+  </LinearGradient>
+);
 };
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 40,
+    paddingBottom: 10,
     paddingHorizontal: 20,
-    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    position: 'relative',
   },
   backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 10,
   },
   headerTitle: {
-    color: 'white',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    flex: 1,
   },
   logoutButton: {
-    borderRadius: 25,
-    overflow: 'hidden',
+    padding: 10,
   },
   logoutGradient: {
-    padding: 12,
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#223047',
-    height: '100%',
+    borderRadius: 20,
+    padding: 5,
   },
   scrollContent: {
-    padding: 24,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
+    flex: 1,
+    padding: 20,
+    paddingBottom: 100,
+  },
+  success: {
+    color: '#4CAF50',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  error: {
+    color: '#F44336',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   form: {
-    width: '100%',
-    maxWidth: 400,
-    marginBottom: 18,
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 2,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#b0bec5',
-    borderRadius: 8,
+    borderColor: '#ddd',
+    borderRadius: 4,
     padding: 10,
     marginBottom: 10,
-    backgroundColor: '#f9f9f9',
-    color: '#223047',
+    fontSize: 16,
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#b0bec5',
-    borderRadius: 8,
+    borderColor: '#ddd',
+    borderRadius: 4,
     marginBottom: 10,
-    backgroundColor: '#f9f9f9',
   },
   picker: {
-    height: 40,
+    height: 50,
     width: '100%',
-    color: '#223047',
   },
   addButton: {
-    backgroundColor: '#4CAF50',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#007BFF',
+    borderRadius: 4,
+    paddingVertical: 15,
+    marginBottom: 10,
     alignItems: 'center',
-    marginTop: 4,
   },
   updateButton: {
-    backgroundColor: '#2196F3',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: '#28A745',
+    borderRadius: 4,
+    paddingVertical: 15,
     flex: 1,
-    marginTop: 4,
+    marginRight: 10,
+    alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#e53935',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: '#DC3545',
+    borderRadius: 4,
+    paddingVertical: 15,
     flex: 1,
-    marginTop: 4,
+    alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: 'white',
     fontWeight: 'bold',
-  },
-  success: {
-    color: '#388e3c',
-    marginBottom: 10,
-    fontWeight: 'bold',
-  },
-  error: {
-    color: '#e53935',
-    marginBottom: 10,
-    fontWeight: 'bold',
+    fontSize: 16,
   },
   subtitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginTop: 24,
-    marginBottom: 8,
-    color: '#fff',
-    alignSelf: 'flex-start',
-  },
-  usuarioItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
+    color: 'white',
     marginBottom: 10,
-    width: '100%',
-    maxWidth: 400,
-    elevation: 1,
+    marginTop: 20,
+  },
+  usuarioCard: {
+    width: isWeb ? (width > 900 ? '31%' : width > 600 ? '48%' : '100%') : '100%',
+    minHeight: 120,
+    maxWidth: 440,
+    marginBottom: 24,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.90)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(52,152,219,0.10)',
+    justifyContent: 'flex-start',
+    overflow: 'hidden',
   },
   usuarioNombre: {
-    fontWeight: 'bold',
     fontSize: 16,
-    color: '#0f3057',
+    fontWeight: 'bold',
+    color: '#333',
   },
   usuarioCorreo: {
-    color: '#555',
     fontSize: 14,
+    color: '#666',
   },
   usuarioRol: {
-    color: '#008891',
     fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
   editButton: {
-    backgroundColor: 'rgba(33,150,243,0.08)',
-    padding: 8,
-    borderRadius: 6,
-    marginLeft: 8,
+    padding: 10,
   },
   deleteButton: {
-    backgroundColor: 'rgba(229,57,53,0.08)',
-    padding: 8,
-    borderRadius: 6,
-    marginLeft: 8,
+    padding: 10,
+  },
+  webContent: {
+    padding: 20, 
+    flex: 1,
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    maxHeight: '80vh', // abans 80vh
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    gap: 24,
+  },
+  scrollContainer: {
+    backgroundColor: 'transparent',
+    flex: 1,
+    minHeight: 200,
+  },
+  mobileContent: {
+    padding: 14,
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.7,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
 

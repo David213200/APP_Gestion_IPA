@@ -26,6 +26,7 @@ const ManageProyectosScreen = ({ navigation, route }) => {
   const [nivelSeleccionado, setNivelSeleccionado] = useState('');
   const [catalogoProyectos, setCatalogoProyectos] = useState([]);
   const [catalogoLoading, setCatalogoLoading] = useState(true);
+  const [alumnoSeleccionado, setAlumnoSeleccionado] = useState(null);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
@@ -61,14 +62,13 @@ const ManageProyectosScreen = ({ navigation, route }) => {
           });
         }
       }
-      /*
-      // FILTRO: Si es profesor, solo alumnos con su nombre como tutor (robusto)
-      if (role === 'professor' && user?.nombre) {
-        const nombreProfesor = user.nombre.trim().toLowerCase();
-        allStudents = allStudents.filter(student =>
-          (student.tutor || '').trim().toLowerCase() === nombreProfesor
-        );
-      }*/
+      // No filtres por tutor, muestra todos los alumnos
+      // if (role === 'professor' && user?.nombre) {
+      //   const nombreProfesor = user.nombre.trim().toLowerCase();
+      //   allStudents = allStudents.filter(student =>
+      //     (student.tutor || '').trim().toLowerCase() === nombreProfesor
+      //   );
+      // }
 
       setStudents(allStudents);
       setFilteredStudents(allStudents);
@@ -121,20 +121,19 @@ const ManageProyectosScreen = ({ navigation, route }) => {
   };
 
   const handleSelectStudent = (student) => {
-    navigation.navigate('EditP', { 
-      student: {
-        ...student,
-        proyectos: student.proyectos || {
-          pr1: 'En curso',
-          pr2: 'Finalizado',
-          pr3: 'No finalizado',
-          assignades: 0,
-          acabades: 0,
-          total: 0
-        }
-      }
-    });
+    navigation.navigate('EditP', { student, user, role });
   };
+
+  const puedeAsignarPropuesta = (propuesta, student) => {
+    return true;  
+  };
+
+  let propuestasDisponibles = [];
+  if (alumnoSeleccionado) {
+    propuestasDisponibles = catalogoProyectos.filter(propuesta =>
+      puedeAsignarPropuesta(propuesta, alumnoSeleccionado)
+    );
+  }
 
   if (loading) {
     return (
@@ -177,7 +176,7 @@ const ManageProyectosScreen = ({ navigation, route }) => {
             <Feather name="search" size={20} color="#4ECDC4" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar alumno..."
+              placeholder="Cerca alumne..."
               placeholderTextColor="rgba(255,255,255,0.7)"
               value={search}
               onChangeText={handleSearch}
@@ -195,7 +194,7 @@ const ManageProyectosScreen = ({ navigation, route }) => {
                   filterStudents(search, itemValue);
                 }}
               >
-                <Picker.Item label="Todos los cursos" value="" />
+                <Picker.Item label="Tots els cursos" value="" />
                 <Picker.Item label="1r ESO" value="1r" />
                 <Picker.Item label="2n ESO" value="2n" />
                 <Picker.Item label="3r ESO" value="3r" />
@@ -231,11 +230,41 @@ const ManageProyectosScreen = ({ navigation, route }) => {
             </Pressable>
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No se encontraron alumnos</Text>
+            <Text style={styles.emptyText}>No s'han trobat alumnes</Text>
           }
         />
 
-        
+        {alumnoSeleccionado && (
+          <View>
+            <Text>Propostes disponibles per a {alumnoSeleccionado.alumno}:</Text>
+            {catalogoProyectos.length === 0 ? (
+              <Text>No hi ha propostes disponibles</Text>
+            ) : (
+              catalogoProyectos.map((propuesta, idx) => {
+                const puedeAsignar = puedeAsignarPropuesta(propuesta, alumnoSeleccionado);
+                return (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={{ flex: 1 }}>{propuesta.nombre} ({propuesta.profesor})</Text>
+                    <Pressable
+                      onPress={() => puedeAsignar && handleAsignarPropuesta(propuesta, alumnoSeleccionado)}
+                      disabled={!puedeAsignar}
+                      style={{
+                        backgroundColor: puedeAsignar ? '#1976D2' : '#ccc',
+                        padding: 6,
+                        borderRadius: 6,
+                        marginLeft: 8,
+                        opacity: puedeAsignar ? 1 : 0.5,
+                      }}
+                    >
+                      <Text style={{ color: 'white' }}>Assigna</Text>
+                    </Pressable>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
+
       </SafeAreaView>
     </LinearGradient>
   );

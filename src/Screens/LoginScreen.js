@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, Alert, StyleSheet, Platform } from "r
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { auth, database } from "../services/credentials";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { ref, get } from "firebase/database";
 
 const LoginScreen = ({ navigation }) => {
@@ -24,7 +24,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = () => {
     if (!isReady) {
-      Alert.alert("Por favor espere", "El sistema de autenticación se está iniciando");
+      Alert.alert("Si us plau, espera", "El sistema d'autenticació s'està iniciant");
       return;
     }
 
@@ -56,38 +56,38 @@ const LoginScreen = ({ navigation }) => {
             } else if (role === "Estudiante") {
               navigation.navigate("Estudiante", { user: userData });
             } else {
-              Alert.alert("Error", "Rol de usuario desconocido");
+              Alert.alert("Error", "Rol d'usuari desconegut");
             }
           } else {
-            Alert.alert("Error", "Usuario no registrado en la base de datos");
+            Alert.alert("Error", "Usuari no registrat a la base de dades");
           }
         } else {
-          Alert.alert("Error", "No se encontraron usuarios en la base de datos");
+          Alert.alert("Error", "No s'han trobat usuaris a la base de dades");
         }
       })
       .catch((error) => {
         console.error("Error completo:", error);
-        let errorMessage = "Error al iniciar sesión";
+        let errorMessage = "Error en iniciar sessió";
         
         if (error.code) {
           switch (error.code) {
             case "auth/invalid-email":
-              errorMessage = "Correo electrónico inválido";
+              errorMessage = "Correu electrònic invàlid";
               break;
             case "auth/user-disabled":
-              errorMessage = "Usuario deshabilitado";
+              errorMessage = "Usuari deshabilitat";
               break;
             case "auth/user-not-found":
-              errorMessage = "Usuario no encontrado";
+              errorMessage = "Usuari no trobat";
               break;
             case "auth/wrong-password":
-              errorMessage = "Contraseña incorrecta";
+              errorMessage = "Contrasenya incorrecta";
               break;
             case "auth/too-many-requests":
-              errorMessage = "Demasiados intentos. Intente más tarde";
+              errorMessage = "Massa intents. Torna-ho a intentar més tard";
               break;
             case "auth/network-request-failed":
-              errorMessage = "Error de red. Verifique su conexión";
+              errorMessage = "Error de xarxa. Comprova la teva connexió";
               break;
           }
         }
@@ -96,12 +96,37 @@ const LoginScreen = ({ navigation }) => {
       });
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert("Error", "Introdueix el teu correu electrònic per recuperar la contrasenya.");
+      console.log("No email provided");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        "Correu enviat",
+        "T'hem enviat un correu per restablir la contrasenya. Revisa la teva safata d'entrada."
+      );
+      console.log("Password reset email sent to:", email);
+    } catch (error) {
+      let errorMessage = "No s'ha pogut enviar el correu de recuperació.";
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No existeix cap usuari amb aquest correu.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "El correu electrònic no és vàlid.";
+      }
+      Alert.alert("Error", errorMessage);
+      console.log("Password reset error:", error);
+    }
+  };
+
   return (
     <LinearGradient colors={['#0f3057', '#00587a', '#008891']} style={styles.gradient}>
       <View style={styles.container}>
         <TextInput
           style={styles.input}
-          placeholder="Correo electrónico"
+          placeholder="Correu electrònic"
           placeholderTextColor="#ccc"
           value={email}
           onChangeText={setEmail}
@@ -111,7 +136,7 @@ const LoginScreen = ({ navigation }) => {
         />
         <TextInput
           style={styles.input}
-          placeholder="Contraseña"
+          placeholder="Contrasenya"
           placeholderTextColor="#ccc"
           value={password}
           onChangeText={setPassword}
@@ -129,9 +154,15 @@ const LoginScreen = ({ navigation }) => {
           >
             <MaterialIcons name="login" size={24} color="white" />
             <Text style={styles.loginText}>
-              {isReady ? "Iniciar Sesión" : "Inicializando..."}
+              {isReady ? "Inicia sessió" : "Inicialitzant..."}
             </Text>
           </LinearGradient>
+        </Pressable>
+
+        <Pressable onPress={handleForgotPassword} style={{ marginTop: 16 }}>
+          <Text style={{ color: '#fff', textAlign: 'center', textDecorationLine: 'underline' }}>
+            Has oblidat la contrasenya?
+          </Text>
         </Pressable>
       </View>
     </LinearGradient>
@@ -178,6 +209,12 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#cccccc',
     opacity: 0.6
+  },
+  forgotPasswordText: {
+    color: 'white',
+    marginTop: 15,
+    textAlign: 'center',
+    textDecorationLine: 'underline'
   }
 });
 
